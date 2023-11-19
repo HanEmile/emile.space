@@ -1,0 +1,3 @@
+# Von Pacman bis Lara Croft | Dieter-Forte Gesamtschule
+
+The "Von PacMan bis Lara Croft" workshop is ment to give students an introduction to the world of creating digital 3D objects. The takes place for half the day (replaces one school day for the students) in which we alternate between explaining new topics and actively working on them. This is hosted by the [ZDI](https://www.mint-duesseldorf.de/). A page on this can be found [here](https://www.mint-duesseldorf.de/pacman-bis-lara-croft/).

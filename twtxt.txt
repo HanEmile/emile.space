@@ -1,0 +1,34 @@
+# | |___      _| |___  _| |_
+# | __\ \ /\ / / __\ \/ / __|
+# | |_ \ V  V /| |_ >  <| |_
+#  \__| \_/\_/  \__/_/\_\\__|
+#
+# Twtxt is an open, distributed
+# microblogging platform that
+# uses human-readable text files,
+# common transport protocols, and
+# free software.
+#
+# Learn more about twtxt at
+#   https://github.com/buckket/twtxt
+#
+# ------------------------------------------
+#
+#    nick = hanemile
+#     url = https://emile.space/twtxt.txt
+#    lang = en
+
+2022-06-15T18:08:17 Well let's give this another go
+2022-09-12T19:12:24 So I've started building a small twtxt client...
+2022-09-27T21:43:12 I'm not using the twtxt client: going to integrate it into my matrix bot
+2022-09-29T02:12:13 It work's: sleeping now.
+2022-10-17T21:51:20 Realized that the twtxt file is not being synced, fixed
+2022-10-20T22:20:40 So I've played around with dithering images and it's amazing!
+2023-08-24T11:04:36 Post cccamp, I've added the following to my helix config:
+2023-08-24T11:04:36 [keys.normal.space.e.i]
+2023-08-24T11:04:36 "d" = ":pipe date +'%Y-%m-%dT%H:%M:%S'"
+2023-08-24T11:05:37 This allows me to press SPACE+e+i+d (emile insert date) to auto create a
+2023-08-24T11:06:01 twtxt compatible date here!
+2023-08-30T14:11:47 Convert all links in all README.md files to markdown links 
+2023-08-30T14:11:47 find . | rg "README.md" | \
+2023-08-30T14:11:47 xargs sed -E -i.backup 's/<a href="([^"]+)">([^<]+)<\/a>/[\2](\1)/g'
