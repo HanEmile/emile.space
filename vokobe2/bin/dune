@@ -1,0 +1,4 @@
+(executable
+ (public_name vokobe2)
+ (name main)
+ (libraries vokobe2))

@@ -1,0 +1,80 @@
+==================================================================
+https://keybase.io/hanemile
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://emile.space
+  * I am hanemile (https://keybase.io/hanemile) on keybase.
+  * I have a public key with fingerprint BE5E 7A59 6047 206E 35D1  6EE4 4D8D D313 A751 DED7
+
+To do so, I am signing this object:
+
+{
+  "body": {
+    "key": {
+      "eldest_kid": "012026f54712fa9500e05fa8ecfd53d4d39d398ab2ac503c5f7940c1de516bd926370a",
+      "fingerprint": "be5e7a596047206e35d16ee44d8dd313a751ded7",
+      "host": "keybase.io",
+      "key_id": "4d8dd313a751ded7",
+      "kid": "010141caaedf4c35d44616bfc7acf5bd521458f700989dae837086e7edfc657e1c370a",
+      "uid": "d5410a4381750326a024ad5aa7afbf19",
+      "username": "hanemile"
+    },
+    "merkle_root": {
+      "ctime": 1641749653,
+      "hash_meta": "b383bd667c9905bffbe58c690636b713ca8f2bee4e4217dbf6668a8fe2543545",
+      "seqno": 21595401
+    },
+    "revoke": {
+      "sig_ids": [
+        "599e497188bdcbcc0f54c24b703d52454870fdac90a320ed53bac41dbedc165d0f"
+      ]
+    },
+    "service": {
+      "hostname": "emile.space",
+      "protocol": "https:"
+    },
+    "type": "web_service_binding",
+    "version": 1
+  },
+  "ctime": 1641749660,
+  "expire_in": 157680000,
+  "prev": "290717f83fce851e04764e89b7e30688d290372b365c5ef9239d9ddfd2b04865",
+  "seqno": 95,
+  "tag": "signature"
+}
+
+which yields the signature:
+
+-----BEGIN PGP MESSAGE-----
+
+owFtk31oVlUcx5/NRWsVWk7JUmuXXjCGnnPveX3A8A+1tJJGjmVhj+d1u2zPc5/d
++2zuUdSKkJxbCIaJQk0IR/WMKIMiIteLpAmLEWzZ4tFgvUdmMPwjsM4dG0R0uXA5
+537P9/c9n985h25ekKmveXTwq8XDLdXJmvM/y4yYWv7qbk9Guuxld3udZvZjurRJ
+SrnOUHtZD0Af+MRiRKFvBccAGICtYEZZjQONdMDdy4T0hcIgUNhSjoCC2mBIpOY+
+CSgQXrNnw0K7iYtxWCg5W2mwoQJzAhD1ATEB1pAYg5BmWgcwEBQ7C03dwo4oSVe4
+cFIkZnUYuTk3yM3G+x/9fG4AEVRCGG2RcvYIERfIKiqUxVJjHyLMLAWAM66FYS4m
+I4Y6uSKYGqjmcvfM2mmMIBAoYJC6XfpEAB8JjYWgwkoLeSpMTFwQeePUHaJg8mGX
+8fY0e3kTd3aZXBxFpRSuKoWpBBIEKeIEB26DIunI5U1JpFwCFkhNCFWcAyytdaCY
+IhyQgEgKAyWY9aUDZZAPqZaWEMLcnPExCjDCLkdiuguRl/Uh5hgB6CLEpjfqNGn1
+JGx33BIv+5SHOR/daRCnkDGplVQKuC4rH0kKAocHYcQosFooDkTgA+PaLYVCUEuj
+FSRYA+tt35PWi3tDNWuftmoOwez+VydF4f40e8U4KkUq6krZlErFJJuSKZWLqXKn
+kbk5j5wMC9qdE7ei18RJGBUcKaf8DzQCmj3TVwxjkwtTBaaEAfekdUyvs/Q5oJBa
+FlhlGIbGHTKCDOOSmgAQxrQTBNSXAcEKG8t9d4i51lb7EiBG/kWRY5dTtDtPh64g
+Sj2xa2rDgZqgLlNTn1mxtKnuo6d3bdvx4F0FPF6Ynr9b19WmFyvTcMOi+Rkvrs8c
+3DD2tjhd273u2suL+xdOHjlpz45tue2mmZHnTpQfam+cXFC7v3rq4oH+x7v3PvDr
+1UrDh8vHTpaj/o+znz42sfaP6b4rQ7feOHAk3zj9+yunt1/uYdPbhtc/8sXRpe+d
+b/o2O/7j5omO6yvf/63uG1h4obox03g58+a6XejwiT+3vr5v/Vsvvvv8TMNLF544
+/szg8KU3rh1asX/lhk/ueGfVolPg3mV5emlz5y0/bWl5sqm1TNb+Nrrvh0oXuXgw
+aBn/vLp3SL/QN73kTPnwNxX7y6avPxjd1HZs5vjUsurEjnv6/ZWvtVXOfPfX6NnB
+o9WBc/e33n731ZaNI2vu3Nr2fuuXU1c+q1s1NHJuDXj24SX/AA==
+=YU4v
+-----END PGP MESSAGE-----
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/hanemile
+
+==================================================================

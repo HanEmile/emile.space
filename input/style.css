@@ -1,0 +1,216 @@
+* { word-wrap:break-word !important; font-family: monospace; margin: 0; padding: 0; }
+
+/* light/dark theme specific foo */
+@media (prefers-color-scheme: light) {
+    :root { --hl-fg: #040404; --hl-bg: #dddddd; }
+    html { background: #ffffff; color: #040404; }
+    /* a:hover { color: #ffffff; background: #040404 } */
+    a:hover {
+      box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+      box-shadow:inset 0px 0px 0px 1px black;
+    }
+    :target a { color: #ffffff; background: #040404; }
+    a:not([href*="webring.xxiivv.com"]):hover, nav a:active { color: #ffffff; background: #040404 }
+    a { color: #040404; background: #ffffff; text-decoration: none;}
+    nav a:hover, a:active { color: #ffffff; background: #040404 }
+    nav { background: /* #ffa500 */ #dddddd }
+    nav a { display:block; background: /* #ffa500 */ #dddddd }
+    h1 { margin: 3ex 0 1ex 0; width: 100%; background-color: /* #ffa500 */ #dddddd }
+    h2 { margin: 2ex 0 1ex 0; width: 100%; background-color: /* #ffa500 */ #dddddd }
+    h3 { margin: 2ex 0 1ex 0; width: 100%; font-size: 1em; background-color: /* #ffa500 */ #dddddd }
+    h4 { margin: 1ex 0 1ex 0; width: 100%; font-size: 1em; /*background-color: #ffffff*/}
+    h5 { margin: 1ex 0 1ex 0; width: 100%; font-size: 1em; /*background-color: #ffffff*/}
+    /*table, th, td { border: 1px solid #040404; }*/
+    table tr td.section a { color: #040404; background-color: #bbbbbb }
+    nav ul li form input { border: 1px solid #040404; background-color: #dddddd; }
+
+    nav a.active { color: #040404; background: #ffffff; }
+    :not(pre) > code { background: #dddddd; padding: 0 0.3ex; }
+}
+@media (prefers-color-scheme: dark) {
+    :root { --hl-fg: #040404; --hl-bg: #bbbbbb; }
+    html { background: #040404; color: #dddddd; }
+    /* a:hover { color: #040404; background: #dddddd; } */
+    a:hover {
+      box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+      box-shadow:inset 0px 0px 0px 1px #dddddd;
+    }
+    :target a { color: #040404; background: #dddddd; }
+    body nav a:not([href*="webring.xxiivv.com"]):hover, nav a:active { color: #dddddd; background: #040404 }
+    nav a:hover { box-shadow: none; }
+    a { color: #dddddd; background: #040404; text-decoration: none; }
+    nav a:hover, a:active { color: #040404; background: #dddddd }
+    nav { background: /* #ffa500 */ #dddddd }
+    nav a { display:block; background: /* #ffa500 */ #dddddd }
+    h1 { margin: 3ex 0 1ex 0; width: 100%; background-color: /* #ffa500 */ #dddddd }
+    h2 { margin: 2ex 0 1ex 0; width: 100%; background-color: /* #ffa500 */ #dddddd }
+    h3 { margin: 2ex 0 1ex 0; width: 100%; font-size: 1em; background-color: /* #ffa500 */ #dddddd }
+    h4 { margin: 1ex 0 1ex 0; width: 100%; font-size: 1em; /*background-color: #dddddd*/}
+    h5 { margin: 1ex 0 1ex 0; width: 100%; font-size: 1em; /*background-color: #dddddd*/}
+    .webring { -webkit-filter: invert(100%); filter: invert(100%); }
+    /*table, th, td { border: 1px solid #dddddd; }*/
+    table tr td.section a { color: #040404; background-color: #bbbbbb }
+    nav ul li form input { border: 1px solid #dddddd; background-color: #040404; color: #dddddd; }
+
+    nav a.active { color: #dddddd; background: #040404; }
+    :not(pre) > code { background: #1c1c1c; padding: 0 0.3ex; }
+}
+
+/* settings for mobile devices */
+@media only screen and (max-width: 768px) {
+  body { margin: 1ex; width: calc(100% - 2ex) !important; }
+  img { max-width: 100% !important; max-height: 500px; }
+}
+img { max-width: 100ex; max-height: 500px; }
+body { margin-left: auto; margin-right: auto; margin-top: 1ex; margin-bottom: 1ex; width: 100ex; }
+
+a .webring { float: right; width: 30px; max-height: 25px; }
+
+table { border-collapse: collapse; margin: auto; }
+td { padding: 0 1ex; }
+h2 + table { width: 100%; }
+h2 + table td:first-child, h2 + table th:first-child { width: 50%; }
+h2 + table td:last-child, h2 + table th:last-child { width: 50%; }
+h2 + table th { display: none; }
+
+/* display local links using [] and external links using {} */
+main a:not([class*="local"]):not(:where(h1, h2, h3, h4, h5, h6, [class*=toc]) a):before { content: "["; }
+main a:not([class*="local"]):not(:where(h1, h2, h3, h4, h5, h6, [class*=toc]) a):after { content: "]"; }
+/*
+p a:not([href*="webring.xxiivv.com"]):not([class*="local"]):before { content: "["; }
+p a:not([href*="webring.xxiivv.com"]):not([class*="local"]):after { content: "]"; }
+*/
+a[href*="//"]:not([href*="emile.space"]):not([class*="icon"]):before { content: '{'; }
+a[href*="//"]:not([href*="emile.space"]):not([class*="icon"]):after { content: '}'; }
+
+ul { list-style-type: none; }
+
+/* navigation bar magic */
+nav { margin: 1ex 0; } 
+nav * { color: #040404; }
+nav ul { list-style: none; position: relative; display: inline-block; }
+nav ul li { display:inline-block; }
+/*
+nav ul ul { display: none; position: absolute; border: 1px solid #040404; background-color: #ff0; }
+nav ul ul li { width: 100%; padding-right: 1ex; float:none; display:list-item; position: relative; }
+nav + ul li { display: inline-block;}
+nav ul li ul li a { z-index: 9999; }
+*/
+
+/* only display the hover dropdown on non-mobile devices */
+/*
+@media only screen and (min-width: 768px) {
+  nav ul li:hover a + ul { display: inherit; white-space: nowrap; }
+}
+*/
+
+/* search box in navbar */
+/*
+nav ul li form { box-sizing: border-box; height: 100%; }
+nav ul li form input { outline: none; height: 100%; position: relative; top: -1px; }
+*/
+
+/* Settings for wide screen devices (showing the floating items left and right)*/
+@media only screen and (min-width: 1360px) {
+  .toc, .backlinks {
+    top: 1ex;
+    float: right;
+    width: 40ex;
+    max-height: calc(100vh - 2ex);
+    position: sticky;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .toc { margin: 1ex 105ex -280ex 1ex; }
+  .backlinks { margin: 1ex -45ex 10ex 1ex; }
+}
+
+.toc,.backlinks { padding-bottom: 1ex; }
+li.toc-h2 { margin-top: 2ex; }
+li.toc-h3 { margin-top: .2ex; }
+
+/* scroll-driven TOC highlighting */
+/* https://kizu.dev/scroll-driven-animations/ */
+h1, h2, h3, h4, h5, h6 {
+  view-timeline-name: var(--is);
+  view-timeline-axis: block;
+}
+.toc a:not(:hover, :focus-visible) {
+  animation: toc-highlight linear, var(--snap-anim, none) linear;
+  animation-timeline: var(--for);
+  animation-range: cover 0% cover 100%;
+  animation-fill-mode: none, forwards;
+}
+.toc:not(:hover, :has(:focus-visible)) a:not(:hover, :focus-visible) {
+  --snap-anim: toc-snap;
+}
+@media only screen and (min-width: 1360px) {
+  .toc { scroll-snap-type: y mandatory; }
+}
+@keyframes toc-highlight {
+  0%, 99.9% { color: var(--hl-fg); background: var(--hl-bg); }
+}
+@keyframes toc-snap {
+  to { scroll-snap-align: center; }
+}
+
+/* nav bar spacing char */
+/*
+nav ul li > a::after { content: " /"; }
+nav ul li > a:only-child::after { content: ""; }
+nav ul li:last-of-type a::after { content: ""; }
+*/
+
+h1 a, h2 a, h3 a { padding-right: 1ex; }
+
+/* add hypens, but not within code, as that's horrible when copying */
+pre { white-space: pre-wrap; hyphens: auto; margin: 2ex 0; border-left: 1px solid; padding-left: 1em; }
+pre.code { white-space: pre-wrap; hyphens: none; }
+
+/* quoted text (> ...): dashed left border, adapts to light/dark via currentColor */
+blockquote { border-left: 1px dashed; padding-left: 1em; margin: 1ex 0; }
+
+/*
+code { margin-left: 2ex;  padding-left: 1ex; }
+*/
+
+/* display the list of folders in the current one as a vertical list, if the
+ * .vert class is present */
+nav + ul.vert li { display: block; }
+
+.w-100 { width: 100%; }
+
+.lvl-1 { display: inline-block; text-indent: 5ex hanging; margin-top: 1ex; }
+.lvl-2 { display: inline-block; text-indent: 7ex hanging; margin-top: 1ex; }
+.lvl-3 { display: inline-block; text-indent: 9ex hanging; margin-top: 1ex; }
+.lvl-4 { display: inline-block; text-indent: 11ex hanging; }
+.lvl-5 { display: inline-block; text-indent: 13ex hanging; }
+
+h1 { display: inline-block; text-indent: 3.3ex hanging; }
+h2 { display: inline-block; text-indent: 5.5ex hanging; }
+h3 { display: inline-block; text-indent: 7.7ex hanging; }
+h4 { display: inline-block; text-indent: 9.9ex hanging; }
+h5 { display: inline-block; text-indent: 12.1ex hanging; }
+
+main p { margin-top: 1ex; margin-bottom: 1ex; hyphens: auto; }
+main ul.toc { list-style-type: none; padding-left: 0; margin-left: 0; }
+main ul { list-style-type: disc; padding-left: 3ex; }
+main ul ul { list-style-type: circle; }
+main ul ul ul { list-style-type: square; }
+main ol { padding-left: 3ex; }
+main ol ol { list-style-type: lower-alpha; }
+main ol ol ol { list-style-type: lower-roman; }
+
+footer { margin-top: 3ex; }
+
+/* main ul li { */
+  /* margin-top: 1ex; */
+/* } */
+
+td.section { background-color: #bbbbbb; color: #000000; }
+span.green { background-color: #228B22; color: #ffffff; }
+td.year-group { padding-top: 1.5em; font-weight: bold; color: #888; font-size: 0.85em; border: none; }

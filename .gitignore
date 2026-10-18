@@ -1,0 +1,20 @@
+# macOS / editor noise
+.DS_Store
+.claude/
+__pycache__/
+*.pyc
+
+# build output (fully regenerable via ./build.sh)
+output/
+vokobe2/_build/
+
+# generated API docs of the OCaml generator (ocamldoc)
+doc/
+
+# hidden draft pages (dot-prefixed, never published to the repo)
+/input/.*.md
+
+# backups & migration leftovers (local only)
+*.bak
+input_backup/
+main_backup
