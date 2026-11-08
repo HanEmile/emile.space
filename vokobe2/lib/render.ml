@@ -4,6 +4,7 @@ type context = {
   pages : Page.page list;
   current : Page.page;
   headings : Heading.heading list;
+  map_cache_dir : string;
 }
 
 let dynamic_headings : Heading.heading list ref = ref []
@@ -462,7 +463,7 @@ let render_backlinks (ctx : context) : string =
 let known_inline_ops = [
   "nav"; "list-pages"; "toc"; "backlinks"; "site-name";
   "img"; "link"; "table"; "green"; "bold"; "em"; "code"; "quote"; "query"; "meta"; "details";
-  "location"
+  "location"; "map"
 ]
 
 let rec eval (ctx : context) (sx : sexp) : string =
@@ -567,6 +568,8 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
       ^ "</blockquote>"
 
   | "query", args -> render_query ctx args
+
+  | "map", args -> Roughmap.render ctx.map_cache_dir args
 
   | "meta", _ -> ""
 

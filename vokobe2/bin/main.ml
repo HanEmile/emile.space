@@ -10,6 +10,11 @@ let () =
 
   Util.ensure_dir output_dir;
 
+  (* (map ...) regions are cached as raw Overpass JSON next to the input
+     directory (i.e. in the repo, outside the published output). The dir
+     is created on first use (see Roughmap.load_region_json). *)
+  let map_cache_dir = Filename.concat input_dir "../map-cache" in
+
   let loaded_pages = Page.load_pages input_dir
                      |> Generator.add_date_range_str in
 
@@ -54,14 +59,14 @@ let () =
     Render.dynamic_headings := [];
     Render.current_heading_counters := [];
     Render.current_toc_index := 0;
-    let ctx0 = Render.{ pages; current = page; headings } in
+    let ctx0 = Render.{ pages; current = page; headings; map_cache_dir } in
     let _ = Render.render_body ctx0 page.raw in
     let extra = !Render.dynamic_headings in
     (* Second pass: render with the full heading list so (toc) sees everything *)
     Render.dynamic_headings := [];
     Render.current_heading_counters := [];
     Render.current_toc_index := 0;
-    let ctx = Render.{ pages; current = page; headings = headings @ extra } in
+    let ctx = Render.{ pages; current = page; headings = headings @ extra; map_cache_dir } in
     let body = Render.render_body ctx page.raw in
     let html = Render.render_html site_name ctx body in
     let out_path = Filename.concat output_dir (page.name ^ ".html") in

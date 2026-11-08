@@ -66,6 +66,9 @@
   img { max-width: 100% !important; max-height: 500px; }
 }
 img { max-width: 100ex; max-height: 500px; }
+
+svg.roughmap { width: 100%; max-width: 100ex; height: auto; margin: 1em 0; }
+.map-error { border: 1px dashed #999; padding: 0.5em; color: #888; font-size: 0.9em; }
 body { margin-left: auto; margin-right: auto; margin-top: 1ex; margin-bottom: 1ex; width: 100ex; }
 
 a .webring { float: right; width: 30px; max-height: 25px; }

@@ -15,6 +15,21 @@ let () =
 ```
 |}
   in
+  (* JSON smoke test *)
+  List.iter
+    (fun s ->
+      try
+        let _ = Vokobe2.Json.parse s in
+        ()
+      with Vokobe2.Json.Error e ->
+        Printf.printf "JSON PARSE FAILED on %S: %s\n" s e;
+        exit 1)
+    [
+      {|{"version": 0.6, "tags": {"a": "b"}}|};
+      "{   \"version\": 0.6,\n  \"generator\": \"x\"\n}";
+      {|{"a":[{"lat":1.2,"lon":3.4}]}|};
+      {|{"elements":[{"type":"way","geometry":[{"lat":51.1,"lon":6.1}]}]}|};
+    ];
   let attrs = Vokobe2.Page.parse_attrs raw in
   let get key = match List.assoc_opt key attrs with Some v -> v | None -> [] in
   assert (get "tag" = [ "project"; "vokobe" ]);

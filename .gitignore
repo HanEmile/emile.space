@@ -11,6 +11,9 @@ vokobe2/_build/
 # generated API docs of the OCaml generator (ocamldoc)
 doc/
 
+# interrupted Overpass downloads (successful ones are committed on purpose)
+map-cache/*.tmp
+
 # hidden draft pages (dot-prefixed, never published to the repo)
 /input/.*.md
 
