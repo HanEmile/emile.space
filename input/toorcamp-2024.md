@@ -1,7 +1,7 @@
 (meta
   (tag "event" "toorcamp")
   (published "2024-06-01")
-  (modified "2026-09-22")
+  (modified "2026-10-18")
   (date "2024-06-26" "2024-06-30")
   (author "Emile")
   (info "tag" "date" "location")

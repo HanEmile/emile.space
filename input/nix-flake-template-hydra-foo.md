@@ -1,7 +1,7 @@
 (meta
   (tag "blog" "nix")
   (published "2025-02-23")
-  (modified "2026-09-22")
+  (modified "2026-10-25")
   (author "Emile")
   (info "tag" "published")
 )

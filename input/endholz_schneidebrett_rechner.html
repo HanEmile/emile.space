@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endholz Schneidebrett Rechner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f',
+                            950: '#451a03',
+                        },
+                        wood: {
+                            bg: '#12100e',
+                            card: '#1c1815',
+                            border: '#2e2722',
+                            accent: '#d97706',
+                            light: '#d7ccc8',
+                            dark: '#3e2723'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #12100e;
+            color: #e5e7eb;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 280px;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-wood-bg text-gray-100 pb-12">
+
+    <!-- Header -->
+    <header class="border-b border-wood-border bg-wood-card/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-amber-600/20 text-amber-500 rounded-xl border border-amber-600/30">
+                    <i data-lucide="grid" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        Endholz-Schneidebrett Rechner
+                        <span class="text-xs font-normal text-amber-500 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">Pro Version</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Präzise Material- & Schnittverlust-Kalkulation für Stirnholz-Projekte</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- CONTROL PANEL / INPUTS (4 Columns) -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Raw Wood Dimensions -->
+                <div class="bg-wood-card border border-wood-border rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center space-x-2 mb-4 pb-2 border-b border-wood-border text-amber-500">
+                        <i data-lucide="box" class="w-5 h-5"></i>
+                        <h2 class="font-semibold text-white">1. Ursprungsbrett (Rohholz)</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Länge (cm)</label>
+                            <div class="relative">
+                                <input type="number" id="rawL" value="120" step="0.5" min="1" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-500">cm</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Breite (cm)</label>
+                                <div class="relative">
+                                    <input type="number" id="rawB" value="80" step="0.5" min="1" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                    <span class="absolute right-3 top-2.5 text-xs text-gray-500">cm</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Dicke / Tiefe (cm)</label>
+                                <div class="relative">
+                                    <input type="number" id="rawT" value="2" step="0.1" min="0.5" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                    <span class="absolute right-3 top-2.5 text-xs text-gray-500">cm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Block Dimensions -->
+                <div class="bg-wood-card border border-wood-border rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center space-x-2 mb-4 pb-2 border-b border-wood-border text-amber-500">
+                        <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                        <h2 class="font-semibold text-white">2. Ziel-Block Maße</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Block-Breite (cm)</label>
+                                <div class="relative">
+                                    <input type="number" id="blockB" value="2" step="0.1" min="0.5" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                    <span class="absolute right-3 top-2.5 text-xs text-gray-500">cm</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Block-Höhe (cm)</label>
+                                <div class="relative">
+                                    <input type="number" id="blockH" value="2" step="0.1" min="0.5" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                    <span class="absolute right-3 top-2.5 text-xs text-gray-500">cm</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Block-Länge = Brettdicke (cm)</label>
+                            <div class="relative">
+                                <input type="number" id="blockL" value="3" step="0.1" min="0.5" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-500">cm</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-1">Bestimmt die finale Stärke des Schneidebretts.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cut Parameters -->
+                <div class="bg-wood-card border border-wood-border rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center space-x-2 mb-4 pb-2 border-b border-wood-border text-amber-500">
+                        <i data-lucide="scissors" class="w-5 h-5"></i>
+                        <h2 class="font-semibold text-white">3. Säge & Verlust-Parameter</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Sägeblattbreite (Schnittfuge / Kerf)</label>
+                            <div class="relative">
+                                <input type="number" id="kerf" value="2.4" step="0.1" min="0" class="w-full bg-wood-bg border border-wood-border rounded-lg px-3 py-2 text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all">
+                                <span class="absolute right-3 top-2.5 text-xs text-gray-500">mm</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs text-gray-400">Abricht- & Abbrandverlust (%)</label>
+                                <span id="marginVal" class="text-xs text-amber-500 font-bold">5%</span>
+                            </div>
+                            <input type="range" id="marginPct" value="5" min="0" max="25" step="1" class="w-full accent-amber-500 cursor-pointer">
+                            <p class="text-[11px] text-gray-500 mt-1">Reserve für Planhobeln, Bündigsägen und Schleifen nach dem Verleimen.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RESULTS & DASHBOARD (8 Columns) -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-wood-card border border-wood-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden">
+                        <div class="text-amber-500/10 absolute -right-2 -bottom-2 pointer-events-none">
+                            <i data-lucide="grid" class="w-20 h-20"></i>
+                        </div>
+                        <span class="text-xs text-gray-400 font-medium">Blöcke Gesamt</span>
+                        <div class="mt-2">
+                            <span id="resTotalBlocks" class="text-2xl sm:text-3xl font-extrabold text-white">0</span>
+                            <span class="text-xs text-gray-400 ml-1">Stk.</span>
+                        </div>
+                        <span id="resGridSplit" class="text-[11px] text-amber-500 mt-1">0 L × 0 B × 0 T</span>
+                    </div>
+
+                    <div class="bg-wood-card border border-wood-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden">
+                        <div class="text-amber-500/10 absolute -right-2 -bottom-2 pointer-events-none">
+                            <i data-lucide="ruler" class="w-20 h-20"></i>
+                        </div>
+                        <span class="text-xs text-gray-400 font-medium">Erreichte Maße</span>
+                        <div class="mt-2">
+                            <span id="resFinalDims" class="text-lg sm:text-xl font-extrabold text-white">0 × 0</span>
+                            <span class="text-xs text-gray-400">cm</span>
+                        </div>
+                        <span id="resThickness" class="text-[11px] text-gray-400 mt-1">Dicke: 0 cm</span>
+                    </div>
+
+                    <div class="bg-wood-card border border-wood-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden">
+                        <div class="text-amber-500/10 absolute -right-2 -bottom-2 pointer-events-none">
+                            <i data-lucide="pie-chart" class="w-20 h-20"></i>
+                        </div>
+                        <span class="text-xs text-gray-400 font-medium">Holzeffizienz</span>
+                        <div class="mt-2">
+                            <span id="resEfficiency" class="text-2xl sm:text-3xl font-extrabold text-emerald-400">0%</span>
+                        </div>
+                        <span id="resWasteVol" class="text-[11px] text-gray-400 mt-1">Verlust: 0 cm³</span>
+                    </div>
+
+                    <div class="bg-wood-card border border-wood-border rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden">
+                        <div class="text-amber-500/10 absolute -right-2 -bottom-2 pointer-events-none">
+                            <i data-lucide="layers" class="w-20 h-20"></i>
+                        </div>
+                        <span class="text-xs text-gray-400 font-medium">Raster Anordnung</span>
+                        <div class="mt-2">
+                            <span id="resGridArrangement" class="text-lg sm:text-xl font-extrabold text-amber-400">0 × 0</span>
+                            <span class="text-xs text-gray-400">Blöcke</span>
+                        </div>
+                        <span id="resAspectRatio" class="text-[11px] text-gray-400 mt-1">Verhältnis: 1:1</span>
+                    </div>
+                </div>
+
+                <!-- Visualizations Area -->
+                <div class="bg-wood-card border border-wood-border rounded-2xl p-5 shadow-lg space-y-6">
+                    <div class="flex items-center justify-between border-b border-wood-border pb-3">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="eye" class="w-5 h-5 text-amber-500"></i>
+                            <h3 class="font-semibold text-white">Visuelle Schnitt- & Anordnungsplanung</h3>
+                        </div>
+                        <div class="flex space-x-2 text-xs">
+                            <button id="btnViewCut" class="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-medium transition-all shadow-sm">
+                                Rohholz Schnittplan
+                            </button>
+                            <button id="btnViewPattern" class="px-3 py-1.5 rounded-lg bg-wood-bg text-gray-400 font-medium hover:text-white transition-all">
+                                Endholz Muster (Draufsicht)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Visual View 1: Cut Plan -->
+                    <div id="viewCutContainer" class="space-y-3">
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                            <span>Aufteilung des Ursprungsbretts inkl. Schnittfuge (Sägeblattbreite)</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Schnittlinien (Kerf)</span>
+                        </div>
+                        <div class="canvas-container bg-wood-bg rounded-xl border border-wood-border p-2">
+                            <canvas id="canvasCut"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Visual View 2: Assembled Grid -->
+                    <div id="viewPatternContainer" class="space-y-3 hidden">
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                            <span>Verleimtes Endholz-Muster (Schachbrett-Struktur durch Wechselholz)</span>
+                            <span>Fertigmaß abzüglich Abrichtreserve</span>
+                        </div>
+                        <div class="canvas-container bg-wood-bg rounded-xl border border-wood-border p-2">
+                            <canvas id="canvasPattern"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown Table -->
+                <div class="bg-wood-card border border-wood-border rounded-2xl p-5 shadow-lg">
+                    <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="list-checks" class="w-5 h-5 text-amber-500"></i>
+                        Detaillierte Schnittrechnung & Volumenbilanz
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-300">
+                            <thead class="bg-wood-bg text-gray-400 uppercase font-semibold">
+                                <tr>
+                                    <th class="p-2.5 rounded-l-lg">Parameter</th>
+                                    <th class="p-2.5">Wert</th>
+                                    <th class="p-2.5 rounded-r-lg">Erklärung / Auswirkung</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-wood-border/50">
+                                <tr>
+                                    <td class="p-2.5 font-medium text-white">Schnitte in Länge (L)</td>
+                                    <td id="tblCutL" class="p-2.5 font-mono text-amber-400">0</td>
+                                    <td class="p-2.5 text-gray-400">Anzahl Streifen aus der Brettlänge (Block-Länge + Kerf)</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2.5 font-medium text-white">Schnitte in Breite (B)</td>
+                                    <td id="tblCutB" class="p-2.5 font-mono text-amber-400">0</td>
+                                    <td class="p-2.5 text-gray-400">Anzahl Schnitte pro Streifen (Block-Breite + Kerf)</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2.5 font-medium text-white">Schnitte in Dicke (T)</td>
+                                    <td id="tblCutT" class="p-2.5 font-mono text-amber-400">0</td>
+                                    <td class="p-2.5 text-gray-400">Nutzbare Schichten aus der Rohholzdicke (Block-Höhe + Kerf)</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2.5 font-medium text-white">Rohholz-Volumen</td>
+                                    <td id="tblVolRaw" class="p-2.5 font-mono">0 cm³</td>
+                                    <td class="p-2.5 text-gray-400">Ausgangsvolumen des rohen Holzbretts</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2.5 font-medium text-white">Nutzbares Endholz-Volumen</td>
+                                    <td id="tblVolUsable" class="p-2.5 font-mono text-emerald-400">0 cm³</td>
+                                    <td class="p-2.5 text-gray-400">Volumen aller verwertbaren Stirnholzblöcke</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2.5 font-medium text-white">Sägemehl- / Verschnitt-Verlust</td>
+                                    <td id="tblVolSawdust" class="p-2.5 font-mono text-rose-400">0 cm³</td>
+                                    <td class="p-2.5 text-gray-400">Verlust durch Sägeblattbreite & Reststücke</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // DOM Elements
+        const rawLInput = document.getElementById('rawL');
+        const rawBInput = document.getElementById('rawB');
+        const rawTInput = document.getElementById('rawT');
+
+        const blockBInput = document.getElementById('blockB');
+        const blockHInput = document.getElementById('blockH');
+        const blockLInput = document.getElementById('blockL');
+
+        const kerfInput = document.getElementById('kerf');
+        const marginPctInput = document.getElementById('marginPct');
+        const marginValDisplay = document.getElementById('marginVal');
+
+        // Output Displays
+        const resTotalBlocks = document.getElementById('resTotalBlocks');
+        const resGridSplit = document.getElementById('resGridSplit');
+        const resFinalDims = document.getElementById('resFinalDims');
+        const resThickness = document.getElementById('resThickness');
+        const resEfficiency = document.getElementById('resEfficiency');
+        const resWasteVol = document.getElementById('resWasteVol');
+        const resGridArrangement = document.getElementById('resGridArrangement');
+        const resAspectRatio = document.getElementById('resAspectRatio');
+
+        // Table Displays
+        const tblCutL = document.getElementById('tblCutL');
+        const tblCutB = document.getElementById('tblCutB');
+        const tblCutT = document.getElementById('tblCutT');
+        const tblVolRaw = document.getElementById('tblVolRaw');
+        const tblVolUsable = document.getElementById('tblVolUsable');
+        const tblVolSawdust = document.getElementById('tblVolSawdust');
+
+        // View Toggles
+        const btnViewCut = document.getElementById('btnViewCut');
+        const btnViewPattern = document.getElementById('btnViewPattern');
+        const viewCutContainer = document.getElementById('viewCutContainer');
+        const viewPatternContainer = document.getElementById('viewPatternContainer');
+
+        // Canvases
+        const canvasCut = document.getElementById('canvasCut');
+        const canvasPattern = document.getElementById('canvasPattern');
+
+        let activeTab = 'cut'; // 'cut' or 'pattern'
+
+        // Tab Switching
+        btnViewCut.addEventListener('click', () => {
+            activeTab = 'cut';
+            btnViewCut.className = "px-3 py-1.5 rounded-lg bg-amber-600 text-white font-medium transition-all shadow-sm";
+            btnViewPattern.className = "px-3 py-1.5 rounded-lg bg-wood-bg text-gray-400 font-medium hover:text-white transition-all";
+            viewCutContainer.classList.remove('hidden');
+            viewPatternContainer.classList.add('hidden');
+            calculateAndDraw();
+        });
+
+        btnViewPattern.addEventListener('click', () => {
+            activeTab = 'pattern';
+            btnViewPattern.className = "px-3 py-1.5 rounded-lg bg-amber-600 text-white font-medium transition-all shadow-sm";
+            btnViewCut.className = "px-3 py-1.5 rounded-lg bg-wood-bg text-gray-400 font-medium hover:text-white transition-all";
+            viewPatternContainer.classList.remove('hidden');
+            viewCutContainer.classList.add('hidden');
+            calculateAndDraw();
+        });
+
+        // Event Listeners for Live Calculation
+        const inputs = [rawLInput, rawBInput, rawTInput, blockBInput, blockHInput, blockLInput, kerfInput, marginPctInput];
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                marginValDisplay.textContent = marginPctInput.value + '%';
+                calculateAndDraw();
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            calculateAndDraw();
+        });
+
+        // Calculation & Render Logic
+        function calculateAndDraw() {
+            // Read Inputs
+            const rawL = parseFloat(rawLInput.value) || 0;
+            const rawB = parseFloat(rawBInput.value) || 0;
+            const rawT = parseFloat(rawTInput.value) || 0;
+
+            const blockB = parseFloat(blockBInput.value) || 0;
+            const blockH = parseFloat(blockHInput.value) || 0;
+            const blockL = parseFloat(blockLInput.value) || 0; // Board thickness
+
+            const kerf = (parseFloat(kerfInput.value) || 0) / 10; // mm to cm
+            const marginPct = (parseFloat(marginPctInput.value) || 0) / 100;
+
+            if (rawL <= 0 || rawB <= 0 || rawT <= 0 || blockB <= 0 || blockH <= 0 || blockL <= 0) {
+                return;
+            }
+
+            // Calculation of slices per dimension taking kerf into account
+            // First cut: along length into slices of target block length (blockL)
+            // formula: n * blockL + (n-1) * kerf <= rawL => n * (blockL + kerf) - kerf <= rawL
+            const cutsL = Math.max(0, Math.floor((rawL + kerf) / (blockL + kerf)));
+
+            // Second cut: along width into slices of target block width (blockB)
+            const cutsB = Math.max(0, Math.floor((rawB + kerf) / (blockB + kerf)));
+
+            // Third cut: along thickness into slices of target block height (blockH)
+            const cutsT = Math.max(0, Math.floor((rawT + kerf) / (blockH + kerf)));
+
+            const totalBlocks = cutsL * cutsB * cutsT;
+
+            // Compute optimal grid layout for assembled cutting board (e.g. square-ish or close to 4:3)
+            let gridCols = 0;
+            let gridRows = 0;
+
+            if (totalBlocks > 0) {
+                // Find a layout where gridCols * gridRows <= totalBlocks that makes a balanced rectangle
+                // Aspect ratio approximation
+                const idealRatio = 4 / 3;
+                let bestDiff = Infinity;
+
+                for (let cols = 1; cols <= totalBlocks; cols++) {
+                    let rows = Math.floor(totalBlocks / cols);
+                    if (rows === 0) continue;
+                    
+                    let width = cols * blockB;
+                    let length = rows * blockH;
+                    let ratio = width / length;
+
+                    let diff = Math.abs(ratio - idealRatio);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        gridCols = cols;
+                        gridRows = rows;
+                    }
+                }
+            }
+
+            // Calculation of Final Board Dimensions (with Planing Reserve)
+            const rawFinalWidth = gridCols * blockB;
+            const rawFinalLength = gridRows * blockH;
+            
+            const finalWidth = Math.max(0, rawFinalWidth * (1 - marginPct));
+            const finalLength = Math.max(0, rawFinalLength * (1 - marginPct));
+            const finalThickness = Math.max(0, blockL * (1 - marginPct));
+
+            // Volume Calculations
+            const volRaw = rawL * rawB * rawT;
+            const volUsableBlock = totalBlocks * (blockB * blockH * blockL);
+            const volFinalNet = finalWidth * finalLength * finalThickness;
+            const volWaste = volRaw - volFinalNet;
+            const efficiency = volRaw > 0 ? ((volFinalNet / volRaw) * 100).toFixed(1) : 0;
+
+            // Update UI Stats
+            resTotalBlocks.textContent = totalBlocks;
+            resGridSplit.textContent = `${cutsL} Stk(L) × ${cutsB} Stk(B) × ${cutsT} Stk(T)`;
+            
+            resFinalDims.textContent = `${finalWidth.toFixed(1)} × ${finalLength.toFixed(1)}`;
+            resThickness.textContent = `Stärke: ${finalThickness.toFixed(1)} cm`;
+
+            resEfficiency.textContent = `${efficiency}%`;
+            resWasteVol.textContent = `Verlust: ${(volWaste).toFixed(0)} cm³`;
+
+            resGridArrangement.textContent = `${gridCols} × ${gridRows}`;
+            const aspectVal = gridRows > 0 ? (gridCols / gridRows).toFixed(2) : '1';
+            resAspectRatio.textContent = `Format: ${aspectVal} : 1`;
+
+            // Update Table
+            tblCutL.textContent = `${cutsL} Streifen`;
+            tblCutB.textContent = `${cutsB} Schnitte`;
+            tblCutT.textContent = `${cutsT} Schichten`;
+            tblVolRaw.textContent = `${volRaw.toFixed(0)} cm³`;
+            tblVolUsable.textContent = `${volUsableBlock.toFixed(0)} cm³`;
+            tblVolSawdust.textContent = `${(volRaw - volUsableBlock).toFixed(0)} cm³`;
+
+            // Render Active Canvas
+            if (activeTab === 'cut') {
+                drawCutCanvas(rawL, rawB, blockL, blockB, kerf, cutsL, cutsB);
+            } else {
+                drawPatternCanvas(gridCols, gridRows, blockB, blockH);
+            }
+        }
+
+        // Draw Canvas 1: Raw Timber Cut Layout
+        function drawCutCanvas(rawL, rawB, blockL, blockB, kerf, cutsL, cutsB) {
+            const container = canvasCut.parentElement;
+            const width = container.clientWidth;
+            const height = container.clientHeight || 280;
+            
+            canvasCut.width = width * window.devicePixelRatio;
+            canvasCut.height = height * window.devicePixelRatio;
+            const ctx = canvasCut.getContext('2d');
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Padding around board
+            const pad = 35;
+            const drawW = width - pad * 2;
+            const drawH = height - pad * 2;
+
+            // Calculate scale factor to fit board into canvas
+            const scale = Math.min(drawW / rawL, drawH / rawB);
+            const boardW = rawL * scale;
+            const boardH = rawB * scale;
+
+            const startX = (width - boardW) / 2;
+            const startY = (height - boardH) / 2;
+
+            // Background Raw Wood
+            ctx.fillStyle = '#2a221b';
+            ctx.strokeStyle = '#634b35';
+            ctx.lineWidth = 2;
+            ctx.fillRect(startX, startY, boardW, boardH);
+            ctx.strokeRect(startX, startY, boardW, boardH);
+
+            // Draw Cut Grid & Blocks
+            ctx.fillStyle = '#b45309'; // Used Blocks accent
+            const blockWPx = blockL * scale;
+            const blockHPx = blockB * scale;
+            const kerfPx = Math.max(1, kerf * scale);
+
+            for (let i = 0; i < cutsL; i++) {
+                for (let j = 0; j < cutsB; j++) {
+                    const x = startX + i * (blockWPx + kerfPx);
+                    const y = startY + j * (blockHPx + kerfPx);
+
+                    // Block fill
+                    ctx.fillStyle = (i + j) % 2 === 0 ? '#3e2e21' : '#4a3829';
+                    ctx.fillRect(x, y, blockWPx, blockHPx);
+                    
+                    // Inner stroke
+                    ctx.strokeStyle = '#574230';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, blockWPx, blockHPx);
+                }
+            }
+
+            // Draw Kerf / Saw lines in Amber
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = Math.max(1.5, kerfPx);
+
+            // Vertical Kerf Lines (Length cuts)
+            for (let i = 1; i <= cutsL; i++) {
+                const x = startX + i * blockWPx + (i - 1) * kerfPx + kerfPx/2;
+                if (x < startX + boardW) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, startY + boardH);
+                    ctx.stroke();
+                }
+            }
+
+            // Horizontal Kerf Lines (Width cuts)
+            for (let j = 1; j <= cutsB; j++) {
+                const y = startY + j * blockHPx + (j - 1) * kerfPx + kerfPx/2;
+                if (y < startY + boardH) {
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(startX + boardW, y);
+                    ctx.stroke();
+                }
+            }
+
+            // Dimension labels
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${rawL} cm (Länge)`, startX + boardW / 2, startY - 10);
+
+            ctx.save();
+            ctx.translate(startX - 12, startY + boardH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(`${rawB} cm (Breite)`, 0, 0);
+            ctx.restore();
+        }
+
+        // Draw Canvas 2: Assembled End-Grain Pattern
+        function drawPatternCanvas(cols, rows, blockB, blockH) {
+            const container = canvasPattern.parentElement;
+            const width = container.clientWidth;
+            const height = container.clientHeight || 280;
+            
+            canvasPattern.width = width * window.devicePixelRatio;
+            canvasPattern.height = height * window.devicePixelRatio;
+            const ctx = canvasPattern.getContext('2d');
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (cols === 0 || rows === 0) return;
+
+            const pad = 35;
+            const drawW = width - pad * 2;
+            const drawH = height - pad * 2;
+
+            const totalW = cols * blockB;
+            const totalH = rows * blockH;
+
+            const scale = Math.min(drawW / totalW, drawH / totalH);
+            const gridW = totalW * scale;
+            const gridH = totalH * scale;
+
+            const startX = (width - gridW) / 2;
+            const startY = (height - gridH) / 2;
+
+            const cellW = blockB * scale;
+            const cellH = blockH * scale;
+
+            // Render Endgrain Blocks (Checkerboard Pattern with Wood Rings Effect)
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const x = startX + c * cellW;
+                    const y = startY + r * cellH;
+
+                    const isDark = (r + c) % 2 === 0;
+
+                    // Base Block Gradient (Endgrain look)
+                    const grad = ctx.createRadialGradient(
+                        x + cellW * 0.5, y + cellH * 0.5, 2,
+                        x + cellW * 0.5, y + cellH * 0.5, Math.max(cellW, cellH)
+                    );
+
+                    if (isDark) {
+                        grad.addColorStop(0, '#543824');
+                        grad.addColorStop(1, '#2e1c10');
+                    } else {
+                        grad.addColorStop(0, '#d4a373');
+                        grad.addColorStop(1, '#a37144');
+                    }
+
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(x, y, cellW, cellH);
+
+                    // Endgrain Rings simulation
+                    ctx.strokeStyle = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(90,50,20,0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(x + cellW * 0.3, y + cellH * 0.3, cellW * 0.35, 0, Math.PI * 2);
+                    ctx.arc(x + cellW * 0.3, y + cellH * 0.3, cellW * 0.6, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Block Border / Glue Line
+                    ctx.strokeStyle = '#1c1815';
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(x, y, cellW, cellH);
+                }
+            }
+
+            // Outer Frame / Board Border
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(startX, startY, gridW, gridH);
+
+            // Dimension labels
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${totalW.toFixed(1)} cm (${cols} Blöcke)`, startX + gridW / 2, startY - 10);
+
+            ctx.save();
+            ctx.translate(startX - 12, startY + gridH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(`${totalH.toFixed(1)} cm (${rows} Blöcke)`, 0, 0);
+            ctx.restore();
+        }
+
+        // Initialize Icons & Calculation on Load
+        window.onload = function() {
+            lucide.createIcons();
+            calculateAndDraw();
+        };
+    </script>
+</body>
+</html>

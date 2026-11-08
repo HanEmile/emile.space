@@ -1,7 +1,7 @@
 (meta
   (tag "event" "ctf")
   (published "2025-02-28")
-  (modified "2026-09-22")
+  (modified "2026-09-28")
   (date "2025-02-28" "2025-02-02")
   (author "Emile")
   (location "Wülfrath" "Germany")

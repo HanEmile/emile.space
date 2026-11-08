@@ -1,7 +1,7 @@
 (meta
   (tag "event" "ski")
   (published "2026-03-15")
-  (modified "2026-09-22")
+  (modified "2026-09-23")
   (date "2026-03-11" "2026-03-15")
   (author "Emile")
   (info "tag" "date" "location")

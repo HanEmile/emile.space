@@ -1,7 +1,7 @@
 (meta
   (tag "blog" "git" "ssh")
   (published "2022-09-01")
-  (modified "2026-09-22")
+  (modified "2026-10-25")
   (author "Emile")
   (info "tag" "published")
 )

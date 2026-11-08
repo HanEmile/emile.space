@@ -1,7 +1,7 @@
 (meta
   (tag "blog" "rust" "stdlib")
   (published "2022-01-03")
-  (modified "2026-09-14")
+  (modified "2026-10-25")
   (author "Emile"))
 
 # offline rust stdlib docs

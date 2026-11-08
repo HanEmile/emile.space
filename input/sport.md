@@ -1,7 +1,7 @@
 (meta
   (tag "navbar")
   (published "2026-09-15")
-  (modified "2026-10-04")
+  (modified "2026-10-25")
   (author "Emile"))
 
 # sport

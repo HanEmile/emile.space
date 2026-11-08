@@ -1,7 +1,7 @@
 (meta
   (tag "event" "emfcamp")
   (published "2022-06-02")
-  (modified "2026-09-22")
+  (modified "2026-09-29")
   (date "2022-06-02" "2022-06-06")
   (author "Emile")
   (info "tag" "date" "location")

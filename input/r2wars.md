@@ -1,7 +1,7 @@
 (meta
   (tag "blog" "security" "r2wars")
   (published "2020-10-10")
-  (modified "2026-09-14")
+  (modified "2026-10-25")
   (author "Emile")
   (info "published" "tag"))
 

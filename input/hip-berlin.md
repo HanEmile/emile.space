@@ -1,7 +1,7 @@
 (meta
   (tag "event" "ccc")
   (published "2022-12-27")
-  (modified "2026-09-22")
+  (modified "2026-09-29")
   (date "2022-12-27" "2022-12-30")
   (author "Emile")
   (info "tag" "date" "location")

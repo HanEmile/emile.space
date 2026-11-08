@@ -1,7 +1,7 @@
 (meta
   (tag "files" "navbar")
   (published "2026-09-14")
-  (modified "2026-09-22")
+  (modified "2026-10-25")
   (author "Emile")
 )
 

@@ -1,7 +1,7 @@
 (meta
   (tag "event" "chaos.jetzt")
   (published "2024-02-01")
-  (modified "2026-09-22")
+  (modified "2026-09-28")
   (date "2024-02-09" "2023-02-11")
   (author "Emile")
   (info "tag" "date" "location")

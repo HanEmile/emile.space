@@ -1,7 +1,7 @@
 (meta
   (tag "event" "jufo")
   (published "2022-05-28")
-  (modified "2026-09-22")
+  (modified "2026-09-23")
   (date "2022-05-28")
   (author "Emile")
   (info "tag" "date" "location")

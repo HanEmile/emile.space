@@ -1,7 +1,7 @@
 (meta
   (tag "event")
   (published "2026-09-28")
-  (modified "2026-09-28")
+  (modified "2026-10-18")
   (date "2025-10-14" "2025-10-16")
   (author "Emile")
   (info "tag" "date" "location")

@@ -16,5 +16,9 @@ if [ "$VERBOSE" = "1" ]; then
   SYNC_ARGS="--verbose"
 fi
 
+echo "[ ] updating modified dates ..."
+./update-modified.py
+echo "[+] done"
+
 ./build.sh $BUILD_ARGS
 ./sync.sh $SYNC_ARGS

@@ -72,6 +72,7 @@ a .webring { float: right; width: 30px; max-height: 25px; }
 
 table { border-collapse: collapse; margin: auto; }
 td { padding: 0 1ex; }
+td.col-date, td.col-published { white-space: nowrap; }
 h2 + table { width: 100%; }
 h2 + table td:first-child, h2 + table th:first-child { width: 50%; }
 h2 + table td:last-child, h2 + table th:last-child { width: 50%; }

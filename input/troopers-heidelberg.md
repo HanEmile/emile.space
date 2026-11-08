@@ -1,7 +1,7 @@
 (meta
 (tag "event" "ctf")
 (published "2022-06-29")
-(modified "2026-09-22")
+(modified "2026-09-23")
 (date "2022-06-29")
 (author "Emile")
 (info "tag" "date" "location")

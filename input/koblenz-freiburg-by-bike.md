@@ -1,7 +1,7 @@
 (meta
   (tag "event" "sport")
   (published "2024-05-01")
-  (modified "2026-09-22")
+  (modified "2026-09-29")
   (date "2024-05-18" "2024-05-20")
   (author "Emile")
   (info "tag" "date" "location")

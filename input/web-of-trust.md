@@ -1,7 +1,7 @@
 (meta
   (tag "blog")
   (published "2024-12-16")
-  (modified "2026-09-22")
+  (modified "2026-10-25")
   (author "Emile")
   (info "tag" "published")
 )

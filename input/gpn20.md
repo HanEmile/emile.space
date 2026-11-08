@@ -1,7 +1,7 @@
 (meta
   (tag "event" "gpn")
   (published "2022-05-19")
-  (modified "2026-09-22")
+  (modified "2026-09-28")
   (date "2022-05-19" "2022-05-22")
   (author "Emile")
   (info "tag" "date" "location")

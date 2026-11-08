@@ -1,7 +1,7 @@
 (meta
   (tag "event" "ctf" "labortage")
   (published "2022-11-11")
-  (modified "2026-09-22")
+  (modified "2026-09-29")
   (date "2022-11-11" "2022-11-13")
   (author "Emile")
   (info "tag" "date" "location")

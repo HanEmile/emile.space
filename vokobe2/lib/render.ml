@@ -297,7 +297,7 @@ let render_query (ctx : context) (args : sexp list) : string =
                      Printf.sprintf "<a href=\"%s\">%s</a>" (page_link p) (Util.html_escape p.title)
                    else val_str
                  in
-                 Printf.sprintf "<td>%s</td>" cell_content)
+                 Printf.sprintf "<td class=\"col-%s\">%s</td>" field cell_content)
                !cols)
         ^ "</tr>\n"
       in
