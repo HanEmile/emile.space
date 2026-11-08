@@ -52,7 +52,7 @@ WIDTH_KM kilometers wide; any number of
 Optional directives: `(aspect 16:9)` sets the map's width:height
 ratio (the default is a 3:1 banner spanning the full page width;
 maps whose natural shape is taller than that, like country
-outlines, keep their shape and are height-capped instead), and
+outlines, keep their shape and are area-capped instead), and
 `(scale 0.5)` shrinks the map to a fraction of the page width.
 
 Instead of a center, `(country NAME)` renders a country outline

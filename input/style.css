@@ -72,9 +72,10 @@ img { max-width: 100ex; max-height: 500px; }
 figure.roughmap { margin: 1em auto; width: 100%; }
 figure.roughmap figcaption { margin-top: 0.5ex; text-align: center; }
 svg.roughmap { display: block; width: 100%; height: auto; }
-/* portrait maps: fixed height instead of full width (keeps text body-sized) */
+/* portrait maps: area-capped height instead of full width (keeps text
+   body-sized); --map-h is set per map so squarish ones stay smaller */
 figure.roughmap.tall { width: auto; max-width: 100%; }
-figure.roughmap.tall svg.roughmap { width: auto; max-width: 100%; height: 60ex; margin: 0 auto; }
+figure.roughmap.tall svg.roughmap { width: auto; max-width: 100%; height: var(--map-h, 60ex); margin: 0 auto; }
 .map-error { border: 1px dashed #999; padding: 0.5em; color: #888; font-size: 0.9em; }
 body { margin-left: auto; margin-right: auto; margin-top: 1ex; margin-bottom: 1ex; width: 100ex; }
 

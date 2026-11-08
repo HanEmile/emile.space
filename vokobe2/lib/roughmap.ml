@@ -72,6 +72,15 @@ let natural_aspect (r : region) : float =
   let kx = Float.cos (clat *. Float.pi /. 180.) in
   ((r.east -. r.west) *. kx) /. Float.max 1e-9 (r.north -. r.south)
 
+(* Display height (in ex) of a tall map of the given w/h aspect.  Tall
+   maps are capped by area (60ex * 40ex, i.e. the footprint of a narrow
+   60ex-tall map) rather than height alone, so squarish maps (Spain)
+   don't dominate the page while narrow ones (UK) still get 60ex. *)
+let tall_area_cap = 60. *. 40.
+
+let tall_height_ex aspect =
+  Float.min 60. (Float.sqrt (tall_area_cap /. Float.max 1e-6 aspect))
+
 (* pad a region (symmetrically) so the rendered map has aspect w/h = a *)
 let pad_to_aspect a (r : region) : region =
   let clat = (r.south +. r.north) /. 2. in
@@ -614,12 +623,14 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
   let scale = width /. (deg_w *. kx) in
   let height = Float.max 1. ((r.north -. r.south) *. scale) in
   (* Text on the map should match the surrounding body text (1em ≈ 2ex).
-     The CSS sizes banners to 100ex wide and tall maps to 60ex high, so we
-     know the SVG-units per displayed ex and can size text from it. The
-     margin estimates below are close enough for the displayed scale. *)
+     The CSS sizes banners to 100ex wide and caps tall maps to
+     tall_height_ex ex high, so we know the SVG-units per displayed ex
+     and can size text from it.  The margin estimates below are close
+     enough for the displayed scale. *)
   let banner = ((r.east -. r.west) *. kx) /. height >= 2.95 in
   let units_per_ex =
-    if banner then (width +. 220.) /. 100. else (height +. 60.) /. 60.
+    if banner then (width +. 220.) /. 100.
+    else (height +. 60.) /. tall_height_ex (((r.east -. r.west) *. kx) /. height)
   in
   let text_sz = 2. *. units_per_ex in
   (* margins around the map area: room for lat/lon tick labels *)
@@ -821,16 +832,26 @@ let render (cache_dir : string) (args : sexp list) : string =
           Printf.sprintf "https://www.openstreetmap.org/%s#map=%d/%.5f/%.5f"
             pin (osm_zoom ~lat:clat ~width_km) clat clon
         in
+        (* tall maps (clearly taller than the 3:1 banner) are capped by
+           area via a per-map CSS variable (see tall_height_ex); 2.95
+           instead of 3. avoids float boundary noise *)
+        let aspect = natural_aspect r in
+        let tall = aspect < 2.95 in
         (* (scale S) sizes the map relative to the full page width (100ex) *)
+        let styles =
+          (if spec.scale = 1. then []
+           else [ Printf.sprintf "max-width:%.0fex" (100. *. spec.scale) ])
+          @
+          if tall then
+            [ Printf.sprintf "--map-h:%.0fex" (tall_height_ex aspect) ]
+          else []
+        in
         let style =
-          if spec.scale = 1. then ""
-          else Printf.sprintf " style=\"max-width:%.0fex\"" (100. *. spec.scale)
+          match styles with
+          | [] -> ""
+          | _ -> Printf.sprintf " style=\"%s\"" (String.concat ";" styles)
         in
-        (* tall maps (clearly taller than the 3:1 banner) are height-capped
-           via CSS; 2.95 instead of 3. avoids float boundary noise *)
-        let cls =
-          if natural_aspect r < 2.95 then "roughmap tall" else "roughmap"
-        in
+        let cls = if tall then "roughmap tall" else "roughmap" in
         Printf.sprintf
           "<figure class=\"%s\"%s>\n%s<figcaption>%s, %s — %.1f km — \
            <a href=\"%s\">openstreetmap</a></figcaption>\n</figure>\n"
