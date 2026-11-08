@@ -50,7 +50,9 @@ let parse_spec (args : sexp list) : (spec, string) result =
             (float_of_atom s, float_of_atom w, float_of_atom n, float_of_atom e)
           with
           | Some south, Some west, Some north, Some east ->
-              region := Some { south; west; north; east }
+              if north <= south || east <= west then
+                error := Some "region: expected south < north and west < east"
+              else region := Some { south; west; north; east }
           | _ -> error := Some "region needs 4 numeric coords (S W N E)")
       | List (Atom "marker" :: lat :: lon :: label_sx) -> (
           match (float_of_atom lat, float_of_atom lon) with
