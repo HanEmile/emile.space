@@ -10,6 +10,14 @@
 
 open Sexp
 
+(* set by bin/main.ml via --offline: never touch the network *)
+let offline = ref false
+
+let set_offline v = offline := v
+
+(* regions fetched during this build (for the build summary) *)
+let fetched = ref 0
+
 (* Public Overpass instances are flaky: try them in order until one works. *)
 let overpass_endpoints =
   [
@@ -126,7 +134,7 @@ let curl_post (url : string) (query : string) (out_path : string) : bool =
 let fetch_overpass (query : string) (out_path : string) : bool =
   List.exists
     (fun ep ->
-      Printf.eprintf "[map] trying %s\n%!" ep;
+      Printf.printf "[map]   trying %s\n%!" ep;
       curl_post ep query out_path)
     overpass_endpoints
 
@@ -137,12 +145,20 @@ let load_region_json (cache_dir : string) (r : region) : (string, string) result
   if Sys.file_exists path then
     try Ok (Util.read_file path)
     with Sys_error e -> Error e
+  else if !offline then
+    Error
+      "offline build: not fetching map data (map appears the next time the \
+       site is built with internet access)"
   else begin
     Util.ensure_dir cache_dir;
-    Printf.eprintf "[map] fetching %.4f,%.4f - %.4f,%.4f from Overpass ...\n%!"
+    Printf.printf
+      "[map] fetching external data for region %.4f,%.4f - %.4f,%.4f (cached \
+       for future builds)\n\
+       %!"
       r.south r.west r.north r.east;
     let tmp_path = path ^ ".tmp" in
     if fetch_overpass (overpass_query r) tmp_path then begin
+      incr fetched;
       (try
          let minified = Json.minify (Util.read_file tmp_path) in
          Util.write_file path minified;
@@ -440,29 +456,47 @@ let render_svg (r : region) (markers : marker list) (json_text : string) :
               path_into buf g
           | Peak _ -> ())
         features;
+      let ink = "#1c1a17" in
       let emit_layer buf style =
         if Buffer.length buf > 0 then
           Printf.bprintf parts "<path d=\"%s\" %s/>\n" (Buffer.contents buf)
             style
       in
       emit_layer b_country
-        {|fill="none" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="4 3" opacity="0.7"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="2.6" stroke-dasharray="7 4" opacity="0.9"|}
+           ink);
       emit_layer b_state
-        {|fill="none" stroke="#8a8a8a" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.55"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.7"|}
+           ink);
       emit_layer b_local
-        {|fill="none" stroke="#8a8a8a" stroke-width="0.7" stroke-dasharray="4 3" opacity="0.4"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.5"|}
+           ink);
+      (* water as open hatching, like carved waves in a linocut *)
       emit_layer b_water_fill
-        {|fill="#cfe3f0" fill-rule="evenodd" stroke="#9dbfd4" stroke-width="0.6"|};
+        (Printf.sprintf
+           {|fill="url(#rm-hatch)" fill-rule="evenodd" stroke="%s" stroke-width="1"|}
+           ink);
       emit_layer b_coast
-        {|fill="none" stroke="#7fa8c4" stroke-width="1.2"|};
+        (Printf.sprintf {|fill="none" stroke="%s" stroke-width="2.2"|} ink);
       emit_layer b_river
-        {|fill="none" stroke="#9dbfd4" stroke-width="1" stroke-linecap="round"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="2" stroke-linecap="round"|}
+           ink);
       emit_layer b_road_hw
-        {|fill="none" stroke="#666" stroke-width="2.0" stroke-linecap="round" opacity="0.75"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="3" stroke-linecap="round"|}
+           ink);
       emit_layer b_road_p
-        {|fill="none" stroke="#666" stroke-width="1.4" stroke-linecap="round" opacity="0.75"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="2.2" stroke-linecap="round"|}
+           ink);
       emit_layer b_road_s
-        {|fill="none" stroke="#666" stroke-width="0.8" stroke-linecap="round" opacity="0.75"|};
+        (Printf.sprintf
+           {|fill="none" stroke="%s" stroke-width="1.4" stroke-linecap="round"|}
+           ink);
       (* label only the 12 highest named peaks: more is unreadable *)
       let labeled_peaks =
         features
@@ -472,6 +506,7 @@ let render_svg (r : region) (markers : marker list) (json_text : string) :
         |> List.filteri (fun i _ -> i < 12)
         |> List.map (fun (lon, lat, n, _) -> (lon, lat, n))
       in
+      let paper = "#ece5d3" in
       List.iter
         (function
           | Peak (lon, lat, name, _) -> (
@@ -479,50 +514,71 @@ let render_svg (r : region) (markers : marker list) (json_text : string) :
               if x >= 0. && x <= width && y >= 0. && y <= height then begin
                 add
                   (Printf.sprintf
-                     "<path d=\"M%s %sL%s %sL%s %sZ\" fill=\"#8a8a8a\" \
-                      opacity=\"0.8\"/>\n"
-                     (fmt x) (fmt (y -. 4.)) (fmt (x -. 3.)) (fmt (y +. 2.))
-                     (fmt (x +. 3.)) (fmt (y +. 2.)));
+                     "<path d=\"M%s %sL%s %sL%s %sZ\" fill=\"%s\"/>\n"
+                     (fmt x) (fmt (y -. 5.)) (fmt (x -. 3.5)) (fmt (y +. 2.5))
+                     (fmt (x +. 3.5)) (fmt (y +. 2.5)) ink);
                 match name with
                 | Some n when List.mem (lon, lat, n) labeled_peaks ->
                     add
                       (Printf.sprintf
-                         "<text x=\"%s\" y=\"%s\" font-size=\"9\" \
-                          fill=\"#666\" style=\"paint-order:stroke\" \
-                          stroke=\"#fff\" stroke-width=\"2\">%s</text>\n"
-                         (fmt (x +. 5.)) (fmt (y +. 3.)) (svg_escape n))
+                         "<text x=\"%s\" y=\"%s\" font-size=\"10\" \
+                          fill=\"%s\" style=\"paint-order:stroke\" \
+                          stroke=\"%s\" stroke-width=\"2.5\">%s</text>\n"
+                         (fmt (x +. 6.)) (fmt (y +. 3.5)) ink paper
+                         (svg_escape n))
                 | _ -> ()
               end
             )
           | _ -> ())
         features;
-      (* markers on top *)
+      (* markers on top: the single accent colour of the print *)
       List.iter
         (fun m ->
           let x, y = project (m.mlon, m.mlat) in
           add
             (Printf.sprintf
-               "<circle cx=\"%s\" cy=\"%s\" r=\"4\" fill=\"#c8321e\" \
-                stroke=\"#fff\" stroke-width=\"1.5\"/>\n"
-               (fmt x) (fmt y));
+               "<circle cx=\"%s\" cy=\"%s\" r=\"4.5\" fill=\"#7d2a1a\" \
+                stroke=\"%s\" stroke-width=\"1.5\"/>\n"
+               (fmt x) (fmt y) paper);
           match m.mlabel with
           | Some label ->
               add
                 (Printf.sprintf
-                   "<text x=\"%s\" y=\"%s\" font-size=\"11\" fill=\"#c8321e\" \
-                    style=\"paint-order:stroke\" stroke=\"#fff\" \
-                    stroke-width=\"3\">%s</text>\n"
-                   (fmt (x +. 7.)) (fmt (y +. 4.)) (svg_escape label))
+                   "<text x=\"%s\" y=\"%s\" font-size=\"11.5\" \
+                    fill=\"#7d2a1a\" style=\"paint-order:stroke\" \
+                    stroke=\"%s\" stroke-width=\"3\">%s</text>\n"
+                   (fmt (x +. 8.)) (fmt (y +. 4.)) paper (svg_escape label))
           | None -> ())
         markers;
       Ok
         (Printf.sprintf
-           "<svg class=\"roughmap\" viewBox=\"0 0 %.0f %.0f\" \
-            xmlns=\"http://www.w3.org/2000/svg\" role=\"img\">\n\
-            <rect x=\"0\" y=\"0\" width=\"%.0f\" height=\"%.0f\" \
-            fill=\"#f5f2ea\" stroke=\"#ccc\"/>\n\
-            %s</svg>\n"
-           width height width height (Buffer.contents parts))
+           {| <svg class="roughmap" viewBox="0 0 %.0f %.0f" xmlns="http://www.w3.org/2000/svg" role="img">
+<defs>
+  <pattern id="rm-hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="9" stroke="%s" stroke-width="1.2" opacity="0.55"/>
+  </pattern>
+  <filter id="rm-wobble" x="-5%%" y="-5%%" width="110%%" height="110%%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+  </filter>
+  <filter id="rm-grain" x="0" y="0" width="100%%" height="100%%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3"/>
+    <feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.10 0"/>
+  </filter>
+</defs>
+<rect x="0" y="0" width="%.0f" height="%.0f" fill="%s"/>
+<g filter="url(#rm-wobble)">
+%s</g>
+<rect x="0" y="0" width="%.0f" height="%.0f" filter="url(#rm-grain)"/>
+<rect x="2" y="2" width="%.0f" height="%.0f" fill="none" stroke="%s" stroke-width="2.5"/>
+<rect x="6" y="6" width="%.0f" height="%.0f" fill="none" stroke="%s" stroke-width="0.8" opacity="0.7"/>
+</svg>
+|}
+           width height ink width height paper
+           (Buffer.contents parts)
+           width height
+           (width -. 4.) (height -. 4.) ink
+           (width -. 12.) (height -. 12.) ink)
 
 let render_error (msg : string) : string =
   Printf.eprintf "[map] %s\n%!" msg;

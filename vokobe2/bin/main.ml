@@ -2,11 +2,23 @@ open Vokobe2
 
 let () =
   if Array.length Sys.argv < 4 then (
-    Printf.eprintf "usage: %s <input_dir> <output_dir> <site_name>\n" Sys.argv.(0);
+    Printf.eprintf "usage: %s <input_dir> <output_dir> <site_name> [--offline]\n"
+      Sys.argv.(0);
     exit 1);
   let input_dir = Sys.argv.(1) in
   let output_dir = Sys.argv.(2) in
   let site_name = Sys.argv.(3) in
+
+  (* --offline: never fetch external data (map regions without a local
+     cache render a placeholder instead) *)
+  let offline =
+    Array.sub Sys.argv 4 (Array.length Sys.argv - 4)
+    |> Array.exists (( = ) "--offline")
+  in
+  if offline then begin
+    Roughmap.set_offline true;
+    Printf.printf "[map] offline mode: skipping external data fetches\n%!"
+  end;
 
   Util.ensure_dir output_dir;
 
@@ -79,6 +91,9 @@ let () =
      work, but they don't appear in any listing themselves. *)
   List.iter (render_page all_visible) hidden_pages;
   Printf.printf "wrote %d html files\n%!" (List.length all_visible + List.length hidden_pages);
+  if !Roughmap.fetched > 0 then
+    Printf.printf "[map] fetched %d new region(s) of external map data\n%!"
+      !Roughmap.fetched;
 
   let rec copy_non_md src_dir dst_dir =
     Sys.readdir src_dir

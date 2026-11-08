@@ -15,3 +15,6 @@ Hackspace in Düsseldorf.
 * 2021-11-09 voted to "2. Vorsitzender"
 * 2023-11-04 voted to "2. Vorsitzender" (again)
 * 2025-12-13 Left the space
+
+(map (region 51.22 6.77 51.25 6.75)
+     (marker 51.235 6.785 "chaosdorf"))

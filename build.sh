@@ -4,25 +4,32 @@ cd "$(dirname "$0")"
 
 VERBOSE=0
 CHECK_LINKS=1
+OFFLINE=0
 BASE_URL="http://localhost:8081"
 
 for arg in "$@"; do
   case "$arg" in
     --verbose|-v) VERBOSE=1 ;;
     --no-check)   CHECK_LINKS=0 ;;
+    --offline)    OFFLINE=1 ;;
     http*)        BASE_URL="$arg" ;;
   esac
 done
+
+OFFLINE_ARG=""
+if [ "$OFFLINE" = "1" ]; then
+  OFFLINE_ARG="--offline"
+fi
 
 echo "[ ] building ..."
 rm -rf output/
 
 if [ "$VERBOSE" = "1" ]; then
   nix-shell shell.nix --run \
-    "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space"
+    "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG"
 else
   nix-shell shell.nix --run \
-    "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space" 2>/dev/null
+    "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG" 2>/dev/null
 fi
 
 chmod -R +r output/

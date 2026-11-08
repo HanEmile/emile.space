@@ -48,11 +48,18 @@ bounding box as south/west/north/east lat/lon; any number of
      (marker 51.235 6.785 "my favourite spot"))
 ```
 
+The map is styled like a linocut print: black ink on paper, hatched
+water, hand-wobbled lines.
+
 The geometry is fetched from the Overpass API (OpenStreetMap data) the
-first time a region is built and cached in `map-cache/` (committed to
-the repo), so later builds are offline. Streams are only included for
-small regions, and only the 12 highest peaks are labelled to keep the
-map readable.
+first time a region is built (the build prints `[map] fetching ...`),
+and cached in `map-cache/` (committed to the repo), so later builds
+need no network. Streams are only included for small regions, and only
+the 12 highest peaks are labelled, to keep the map readable.
+
+`./build.sh --offline` builds without any network access; regions
+without a cached download render a placeholder until the next online
+build.
 
 
 
