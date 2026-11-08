@@ -39,12 +39,13 @@ For example this is what creates the list on the [blog](/blog) page:
 ### maps
 
 Renders a rough outline map (borders, major roads, rivers, lakes,
-coastlines, mountain peaks) as inline SVG. `(region S W N E)` takes the
-bounding box as south/west/north/east lat/lon; any number of
+coastlines, mountain peaks) as inline SVG. `(center LAT LON WIDTH_KM)`
+puts the map center at the given coordinates and makes the map
+WIDTH_KM kilometers wide; any number of
 `(marker LAT LON "optional label")` adds markers:
 
 ```lisp
-(map (region 51.22 6.77 51.25 6.80)
+(map (center 51.235 6.785 3)
      (marker 51.235 6.785 "my favourite spot"))
 ```
 

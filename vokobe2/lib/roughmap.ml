@@ -1,6 +1,6 @@
 (* Rough outline maps from OpenStreetMap data.
 
-   (map (region S W N E)
+   (map (center LAT LON WIDTH_KM)
         (marker LAT LON "optional label")
         ...)
 
@@ -45,15 +45,35 @@ let parse_spec (args : sexp list) : (spec, string) result =
   let error = ref None in
   List.iter
     (function
-      | List [ Atom "region"; s; w; n; e ] -> (
+      | List [ Atom "center"; clat; clon; cwidth ] -> (
           match
-            (float_of_atom s, float_of_atom w, float_of_atom n, float_of_atom e)
+            ( float_of_atom clat,
+              float_of_atom clon,
+              float_of_atom cwidth )
           with
-          | Some south, Some west, Some north, Some east ->
-              if north <= south || east <= west then
-                error := Some "region: expected south < north and west < east"
-              else region := Some { south; west; north; east }
-          | _ -> error := Some "region needs 4 numeric coords (S W N E)")
+          | Some lat, Some lon, Some w_km ->
+              if w_km <= 0. || Float.abs lat > 90. || Float.abs lon > 180. then
+                error := Some "center: bad LAT LON or non-positive WIDTH_KM"
+              else
+                let cos_lat = Float.cos (lat *. Float.pi /. 180.) in
+                if cos_lat < 1e-6 then
+                  error := Some "center: latitude too close to a pole"
+                else begin
+                  (* width_km is the horizontal width; spans are symmetric *)
+                  let half_lat = w_km /. 2. /. 110.574 in
+                  let half_lon = w_km /. 2. /. (111.320 *. cos_lat) in
+                  region :=
+                    Some
+                      {
+                        south = lat -. half_lat;
+                        north = lat +. half_lat;
+                        west = lon -. half_lon;
+                        east = lon +. half_lon;
+                      }
+                end
+          | _ -> error := Some "center needs numeric LAT LON WIDTH_KM")
+      | List [ Atom "region"; _; _; _; _ ] ->
+          error := Some "use (center LAT LON WIDTH_KM) instead of region"
       | List (Atom "marker" :: lat :: lon :: label_sx) -> (
           match (float_of_atom lat, float_of_atom lon) with
           | Some mlat, Some mlon ->
@@ -74,7 +94,7 @@ let parse_spec (args : sexp list) : (spec, string) result =
   | Some e -> Error e
   | None -> (
       match !region with
-      | None -> Error "map is missing a (region S W N E) directive"
+      | None -> Error "map is missing a (center LAT LON WIDTH_KM) directive"
       | Some r -> Ok { region = r; markers = List.rev !markers })
 
 (* -- Overpass fetching + caching -------------------------------------- *)
