@@ -56,7 +56,7 @@ let () =
   let tag_pages = Generator.generate_tag_pages visible_pages in
   let date_pages = Generator.generate_date_pages visible_pages in
   let base_pages = visible_pages @ tag_pages @ date_pages in
-  let attr_pages = Generator.generate_location_pages base_pages in
+  let attr_pages = Generator.generate_location_pages ~map_cache_dir base_pages in
   let all_visible = base_pages @ attr_pages in
   Printf.printf "pages: %d (%d tag, %d date, %d attr, %d hidden)\n%!"
     (List.length all_visible)

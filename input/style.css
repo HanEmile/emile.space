@@ -28,6 +28,7 @@
 
     nav a.active { color: #040404; background: #ffffff; }
     :not(pre) > code { background: #dddddd; padding: 0 0.3ex; }
+    svg.roughmap { background: #ffffff; }
 }
 @media (prefers-color-scheme: dark) {
     :root { --hl-fg: #040404; --hl-bg: #bbbbbb; }
@@ -58,6 +59,7 @@
 
     nav a.active { color: #dddddd; background: #040404; }
     :not(pre) > code { background: #1c1c1c; padding: 0 0.3ex; }
+    svg.roughmap { background: #040404; }
 }
 
 /* settings for mobile devices */
@@ -67,7 +69,12 @@
 }
 img { max-width: 100ex; max-height: 500px; }
 
-svg.roughmap { display: block; width: 100%; max-width: 60ex; height: auto; margin: 1em auto; }
+figure.roughmap { margin: 1em auto; width: 100%; }
+figure.roughmap figcaption { margin-top: 0.5ex; text-align: center; }
+svg.roughmap { display: block; width: 100%; height: auto; }
+/* portrait maps: fixed height instead of full width (keeps text body-sized) */
+figure.roughmap.tall { width: auto; max-width: 100%; }
+figure.roughmap.tall svg.roughmap { width: auto; max-width: 100%; height: 60ex; margin: 0 auto; }
 .map-error { border: 1px dashed #999; padding: 0.5em; color: #888; font-size: 0.9em; }
 body { margin-left: auto; margin-right: auto; margin-top: 1ex; margin-bottom: 1ex; width: 100ex; }
 

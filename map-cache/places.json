@@ -1,0 +1,328 @@
+{
+ "aliases": {
+  "Deutschland": "Germany",
+  "UK": "United Kingdom",
+  "USA": "United States of America"
+ },
+ "cities": {
+  "Aachen": {
+   "lat": 50.77635,
+   "lon": 6.08386
+  },
+  "Alte Hölle": {
+   "lat": 52.11846,
+   "lon": 12.40718
+  },
+  "Arlberg": {
+   "lat": 47.12985,
+   "lon": 10.21063
+  },
+  "Bangkok": {
+   "lat": 13.75249,
+   "lon": 100.49351
+  },
+  "Barcelona": {
+   "lat": 41.38258,
+   "lon": 2.17707
+  },
+  "Belgium": {
+   "lat": 50.64028,
+   "lon": 4.66671
+  },
+  "Berlin": {
+   "lat": 52.51739,
+   "lon": 13.39513
+  },
+  "Bochum": {
+   "lat": 51.48181,
+   "lon": 7.21966
+  },
+  "Bonn": {
+   "lat": 50.73526,
+   "lon": 7.10246
+  },
+  "Brussels": {
+   "lat": 50.84674,
+   "lon": 4.35249
+  },
+  "Chemnitz": {
+   "lat": 50.83235,
+   "lon": 12.91891
+  },
+  "Chiang Mai": {
+   "lat": 18.78828,
+   "lon": 98.98588
+  },
+  "Cologne": {
+   "lat": 50.93836,
+   "lon": 6.95997
+  },
+  "Corsica": {
+   "lat": 42.1881,
+   "lon": 9.06831
+  },
+  "Da Nang": {
+   "lat": 16.0685,
+   "lon": 108.22402
+  },
+  "Darmstadt": {
+   "lat": 49.87277,
+   "lon": 8.65118
+  },
+  "Dolomites": {
+   "lat": 46.29457,
+   "lon": 12.05132
+  },
+  "Duisburg": {
+   "lat": 51.435,
+   "lon": 6.75956
+  },
+  "Düsseldorf": {
+   "lat": 51.2254,
+   "lon": 6.77631
+  },
+  "Eastnor": {
+   "lat": 52.03269,
+   "lon": -2.39109
+  },
+  "Egypt": {
+   "lat": 26.25405,
+   "lon": 29.26755
+  },
+  "El Médano, Tenerife": {
+   "lat": 28.04621,
+   "lon": -16.53817
+  },
+  "Fiss-Ladis": {
+   "lat": 47.04951,
+   "lon": 10.57298
+  },
+  "Flensburg": {
+   "lat": 54.7833,
+   "lon": 9.43333
+  },
+  "Fuerteventura": {
+   "lat": 28.40038,
+   "lon": -14.00487
+  },
+  "Geestmerambacht": {
+   "lat": 52.68519,
+   "lon": 4.76877
+  },
+  "Gent": {
+   "lat": 51.05383,
+   "lon": 3.72501
+  },
+  "Gruissan": {
+   "lat": 43.10704,
+   "lon": 3.0865
+  },
+  "Hamburg": {
+   "lat": 53.55017,
+   "lon": 10.00132
+  },
+  "Hanoi": {
+   "lat": 21.02833,
+   "lon": 105.85404
+  },
+  "Heidelberg": {
+   "lat": 49.40936,
+   "lon": 8.69472
+  },
+  "Heilbronn": {
+   "lat": 49.14229,
+   "lon": 9.21866
+  },
+  "Ho Chi Minh City": {
+   "lat": 10.77373,
+   "lon": 106.7166
+  },
+  "Hong Kong": {
+   "lat": 22.28183,
+   "lon": 114.15828
+  },
+  "Ischgl": {
+   "lat": 47.01202,
+   "lon": 10.29132
+  },
+  "Jiu Jian": {
+   "lat": 40.07315,
+   "lon": 116.27074
+  },
+  "Karlsruhe": {
+   "lat": 49.00687,
+   "lon": 8.40342
+  },
+  "Katowice": {
+   "lat": 50.21373,
+   "lon": 19.00588
+  },
+  "Ko Phi Phi": {
+   "lat": 7.7402,
+   "lon": 98.7786
+  },
+  "Krabi": {
+   "lat": 8.11117,
+   "lon": 99.10973
+  },
+  "Kuala Lumpur": {
+   "lat": 3.1517,
+   "lon": 101.69424
+  },
+  "Lanzarote": {
+   "lat": 29.03971,
+   "lon": -13.63629
+  },
+  "Las Vegas": {
+   "lat": 36.16743,
+   "lon": -115.14841
+  },
+  "Lausanne": {
+   "lat": 46.52183,
+   "lon": 6.6327
+  },
+  "Lech": {
+   "lat": 47.17304,
+   "lon": 10.01442
+  },
+  "Leipzig": {
+   "lat": 51.34063,
+   "lon": 12.37473
+  },
+  "London": {
+   "lat": 51.50745,
+   "lon": -0.12777
+  },
+  "Lübeck": {
+   "lat": 53.86644,
+   "lon": 10.68474
+  },
+  "Madrid": {
+   "lat": 40.41678,
+   "lon": -3.70351
+  },
+  "Mildenberg": {
+   "lat": 53.03149,
+   "lon": 13.30748
+  },
+  "Munich": {
+   "lat": 48.13711,
+   "lon": 11.57538
+  },
+  "Mühldorf": {
+   "lat": 48.2405,
+   "lon": 12.5251
+  },
+  "Münster": {
+   "lat": 51.96251,
+   "lon": 7.62519
+  },
+  "Nanjing": {
+   "lat": 32.04383,
+   "lon": 118.77886
+  },
+  "New York": {
+   "lat": 40.71273,
+   "lon": -74.00602
+  },
+  "Nha Trang": {
+   "lat": 12.2085,
+   "lon": 109.28712
+  },
+  "Novi Sad": {
+   "lat": 45.25513,
+   "lon": 19.84518
+  },
+  "Obertauern": {
+   "lat": 47.24944,
+   "lon": 13.55696
+  },
+  "Orcas Island": {
+   "lat": 48.65156,
+   "lon": -122.81793
+  },
+  "Phi Phi": {
+   "lat": 7.7402,
+   "lon": 98.7786
+  },
+  "Phnom Penh": {
+   "lat": 11.57304,
+   "lon": 104.85781
+  },
+  "Phuket": {
+   "lat": 7.9366,
+   "lon": 98.35293
+  },
+  "Rhodes": {
+   "lat": 36.1724,
+   "lon": 27.91948
+  },
+  "Shanghai": {
+   "lat": 31.23127,
+   "lon": 121.47002
+  },
+  "Shenzhen": {
+   "lat": 22.54457,
+   "lon": 114.05454
+  },
+  "Siem Reap": {
+   "lat": 13.36176,
+   "lon": 103.85903
+  },
+  "Singapore": {
+   "lat": 1.28992,
+   "lon": 103.85191
+  },
+  "St. Anton": {
+   "lat": 47.1296,
+   "lon": 10.2681
+  },
+  "Stuben": {
+   "lat": 47.13941,
+   "lon": 10.15983
+  },
+  "Tam Coc": {
+   "lat": 20.21767,
+   "lon": 105.92948
+  },
+  "Veluwemeer": {
+   "lat": 52.40838,
+   "lon": 5.71272
+  },
+  "Viana do Castelo": {
+   "lat": 41.71814,
+   "lon": -8.76372
+  },
+  "Vienna": {
+   "lat": 48.20835,
+   "lon": 16.3725
+  },
+  "Wedau": {
+   "lat": 51.39211,
+   "lon": 6.79711
+  },
+  "Wülfrath": {
+   "lat": 51.28186,
+   "lon": 7.03281
+  },
+  "Zeewolde": {
+   "lat": 52.34512,
+   "lon": 5.45808
+  }
+ },
+ "countries": {
+  "Hong Kong": {
+   "lat": 22.28183,
+   "lon": 114.15828,
+   "width_km": 71
+  },
+  "Singapore": {
+   "lat": 1.35711,
+   "lon": 103.8195,
+   "width_km": 112
+  }
+ },
+ "unresolved": [
+  "Koblenz → Freiburg"
+ ]
+}

@@ -1,7 +1,7 @@
 (meta
   (tag "project")
   (published "2022-01-01")
-  (modified "2026-10-25")
+  (modified "2026-11-08")
   (author "Emile")
   (info "tag")
 )
@@ -16,5 +16,6 @@ Hackspace in Düsseldorf.
 * 2023-11-04 voted to "2. Vorsitzender" (again)
 * 2025-12-13 Left the space
 
-(map (center 51.235 6.785 3)
-     (marker 51.235 6.785 "chaosdorf"))
+(map (center 51.2125738 6.7996122 3)
+     (aspect 16:9)
+     (marker 51.2125738 6.7996122 "chaosdorf"))
