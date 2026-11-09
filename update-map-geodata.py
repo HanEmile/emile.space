@@ -6,7 +6,7 @@ Writes:
   map-cache/places.json            city coordinates + non-country fallbacks (islands
                                    etc.) + country name aliases
 
-Natural Earth 110m outlines are public domain (https://www.naturalearthdata.com).
+Natural Earth 50m outlines are public domain (https://www.naturalearthdata.com).
 City coordinates come from Nominatim (osm.org) - run sparingly, it reuses its
 previous output and only geocodes locations it hasn't seen before.
 """
@@ -15,8 +15,8 @@ import json, os, re, sys, time, urllib.request, urllib.parse, glob
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(ROOT, "map-cache")
 NE_URL = ("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
-          "master/geojson/ne_110m_admin_0_countries.geojson")
-NE_LOCAL = os.path.join(CACHE, "ne_110m_admin_0_countries.geojson")
+          "master/geojson/ne_50m_admin_0_countries.geojson")
+NE_LOCAL = os.path.join(CACHE, "ne_50m_admin_0_countries.geojson")
 OUTLINES_OUT = os.path.join(CACHE, "country-outlines.json")
 PLACES_OUT = os.path.join(CACHE, "places.json")
 UA = "vokobe2 geodata updater (https://emile.space)"
@@ -36,9 +36,73 @@ def fetch(url, out=None):
             f.write(data)
     return data
 
+def rdp(ring, eps):
+    """Ramer-Douglas-Peucker on a closed ring (start point kept fixed)."""
+    if len(ring) < 4:
+        return ring
+    keep = [False] * len(ring)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(ring) - 1)]
+    while stack:
+        i0, i1 = stack.pop()
+        x1, y1 = ring[i0]
+        x2, y2 = ring[i1]
+        dx, dy = x2 - x1, y2 - y1
+        ln = (dx * dx + dy * dy) ** 0.5
+        maxd, maxi = eps, -1
+        for i in range(i0 + 1, i1):
+            x, y = ring[i]
+            if ln < 1e-12:
+                d = ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5
+            else:
+                d = abs(dx * (y1 - y) - (x1 - x) * dy) / ln
+            if d > maxd:
+                maxd, maxi = d, i
+        if maxi >= 0:
+            keep[maxi] = True
+            stack += [(i0, maxi), (maxi, i1)]
+    return [pt for pt, k in zip(ring, keep) if k]
+
+def ring_area(ring):
+    """shoelace area in deg^2, lon scaled by cos(mean lat)"""
+    if len(ring) < 3:
+        return 0.0
+    import math
+    clat = math.cos(math.radians(sum(p[1] for p in ring) / len(ring)))
+    a = 0.0
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+        a += (x1 * clat) * y2 - (x2 * clat) * y1
+    return abs(a) / 2.0
+
+# ring filtering: keep maps mainland-focused (island cities get a local
+# Overpass map instead, see Generator/roughmap).  A ring is dropped when
+#   - it is tiny compared to the country's largest ring (specks), or
+#   - it is both far away AND small compared to it -- this drops overseas
+#     islands (Canaries, Svalbard, Alaska, French Guiana) but keeps both
+#     nearby islands (Balearics, Sicily, Hokkaido) and far-away major
+#     landmasses (Peninsular Malaysia vs Borneo, Papua for Indonesia)
+MIN_RING_FRAC = 0.005
+NEAR_RING_DIST_KM = 350.0
+FAR_RING_FRAC = 0.30
+# pre-simplify 50m rings to ~0.005 deg (~500 m); the renderer simplifies
+# further to display pixels, this only keeps the cache compact
+SIMPLIFY_EPS = 0.005
+
+def ring_dist_km(a, b):
+    """approx min distance between two (already simplified) rings"""
+    import math
+    best = float("inf")
+    for x1, y1 in a:
+        clat = math.cos(math.radians(y1))
+        for x2, y2 in b:
+            d = (((x1 - x2) * clat) ** 2 + (y1 - y2) ** 2) ** 0.5 * 111.32
+            if d < best:
+                best = d
+    return best
+
 def round_ring(ring):
     out, prev = [], None
-    for lon, lat in ((round(x, 2), round(y, 2)) for x, y in ring):
+    for lon, lat in ((round(x, 4), round(y, 4)) for x, y in ring):
         if (lon, lat) != prev:
             out.append([lon, lat])
             prev = (lon, lat)
@@ -56,15 +120,28 @@ def rings_of_geometry(geom):
     rings = []
     for poly in polys:
         for ring in poly:  # outer + holes; both get stroked anyway
-            r = round_ring(ring)
+            if len(ring) < 4:
+                continue
+            r = round_ring(rdp(ring, SIMPLIFY_EPS))
             if len(r) >= 4:
                 rings.append(r)
-    return rings
+    if not rings:
+        return rings
+    main = max(rings, key=ring_area)
+    main_area = ring_area(main)
+    def keep(r):
+        a = ring_area(r)
+        if a < MIN_RING_FRAC * main_area:
+            return False
+        if ring_dist_km(r, main) <= NEAR_RING_DIST_KM:
+            return True
+        return a >= FAR_RING_FRAC * main_area
+    return [r for r in rings if keep(r)]
 
 # ---------------- country outlines -------------------------------------------------
 
 if not os.path.exists(NE_LOCAL):
-    print("downloading Natural Earth 110m countries ...")
+    print("downloading Natural Earth 50m countries ...")
     fetch(NE_URL, NE_LOCAL)
 
 ne = json.load(open(NE_LOCAL))
@@ -127,7 +204,9 @@ def geocode(city, country):
     if "boundingbox" in r:
         s, n, w, e = map(float, r["boundingbox"])
         import math
-        out["width_km"] = max(1, round((e - w) * 111.320 * math.cos(math.radians(out["lat"]))))
+        # clamp: Nominatim bboxes of island city-states (Hong Kong,
+        # Singapore) span far more sea than land; cap keeps the map urban
+        out["width_km"] = max(1, min(40, round((e - w) * 111.320 * math.cos(math.radians(out["lat"])))))
     return out
 
 n_geo = 0
