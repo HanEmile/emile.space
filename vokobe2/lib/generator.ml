@@ -159,9 +159,11 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
               [("tag", ["city"]); ("country", [country]); ("info", ["country"])]
           | None -> [("tag", ["city"])]
         in
-        (* city map: the country outline with a marker on the city; if the
-           city lies outside the country's outline (e.g. islands on a
-           mainland-only map), use a local Overpass map around it instead *)
+        (* city maps: the country outline with a marker on the city, plus
+           a local Overpass map of the city itself when the country map
+           is a pure outline (for city-states it already IS the local
+           map).  If the city lies outside the country's outline (e.g.
+           islands on a mainland-only map), only the local map is used *)
         let map_block =
           match country_opt with
           | Some country when Roughmap.country_available map_cache_dir country ->
@@ -182,6 +184,14 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
                     Printf.sprintf
                       "(map (country \"%s\") (marker %.5f %.5f \"%s\"))\n\n"
                       escaped_country lat lon escaped
+                    ^
+                    if Roughmap.country_outline_detailed map_cache_dir country
+                    then
+                      Printf.sprintf
+                        "(map (center %.5f %.5f 40) (marker %.5f %.5f \
+                         \"%s\"))\n\n"
+                        lat lon lat lon escaped
+                    else ""
                   else
                     Printf.sprintf
                       "(map (center %.5f %.5f 40) (marker %.5f %.5f \"%s\"))\n\n"

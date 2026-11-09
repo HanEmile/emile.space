@@ -2,22 +2,27 @@ open Vokobe2
 
 let () =
   if Array.length Sys.argv < 4 then (
-    Printf.eprintf "usage: %s <input_dir> <output_dir> <site_name> [--offline]\n"
+    Printf.eprintf
+      "usage: %s <input_dir> <output_dir> <site_name> [--offline] \
+       [--dump-missing-queries]\n"
       Sys.argv.(0);
     exit 1);
   let input_dir = Sys.argv.(1) in
   let output_dir = Sys.argv.(2) in
   let site_name = Sys.argv.(3) in
 
+  let flags = Array.sub Sys.argv 4 (Array.length Sys.argv - 4) in
   (* --offline: never fetch external data (map regions without a local
      cache render a placeholder instead) *)
-  let offline =
-    Array.sub Sys.argv 4 (Array.length Sys.argv - 4)
-    |> Array.exists (( = ) "--offline")
-  in
-  if offline then begin
+  if Array.exists (( = ) "--offline") flags then begin
     Roughmap.set_offline true;
     Printf.printf "[map] offline mode: skipping external data fetches\n%!"
+  end;
+  (* --dump-missing-queries: don't fetch; write map-cache/*.query files
+     for fetch-map-cache.sh (parallel download, e.g. on a fast host) *)
+  if Array.exists (( = ) "--dump-missing-queries") flags then begin
+    Roughmap.set_dump_queries true;
+    Printf.printf "[map] dumping missing region queries instead of fetching\n%!"
   end;
 
   Util.ensure_dir output_dir;

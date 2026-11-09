@@ -13,6 +13,7 @@ doc/
 
 # interrupted Overpass downloads (successful ones are committed on purpose)
 map-cache/*.tmp
+map-cache/*.query
 
 # hidden draft pages (dot-prefixed, never published to the repo)
 /input/.*.md

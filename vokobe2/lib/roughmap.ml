@@ -17,6 +17,14 @@ let offline = ref false
 
 let set_offline v = offline := v
 
+(* set by bin/main.ml via --dump-missing-queries: instead of fetching a
+   missing region, write its Overpass query to <cachefile>.query so a
+   parallel fetcher (fetch-map-cache.sh, possibly on another host) can
+   download all of them at once *)
+let dump_queries = ref false
+
+let set_dump_queries v = dump_queries := v
+
 (* regions fetched during this build (for the build summary) *)
 let fetched = ref 0
 
@@ -235,11 +243,29 @@ let geom_of_rings (el : Json.t) : geom list =
         rings
 
 (* outlines with fewer points render as crude polygons (microstates at
-   natural-earth 50m: Singapore has 8); those are better served by the
-   local Overpass map around their center *)
+   natural-earth 50m: Singapore has 8); those are better served by a
+   local Overpass map of the same (padded) bbox *)
 let min_outline_points = 50
 
-(* outline rings + region for a country name *)
+let outline_detailed (rings : geom list) : bool =
+  let npts = List.fold_left (fun acc g -> acc + List.length g) 0 rings in
+  npts >= min_outline_points
+
+(* margin around country maps so borders/islands don't sit right on the
+   frame edge (fraction of the span, per side) *)
+let pad_region frac (r : region) : region =
+  let dlat = frac *. (r.north -. r.south)
+  and dlon = frac *. (r.east -. r.west) in
+  {
+    south = Float.max (-90.) (r.south -. dlat);
+    west = Float.max (-180.) (r.west -. dlon);
+    north = Float.min 90. (r.north +. dlat);
+    east = Float.min 180. (r.east +. dlon);
+  }
+
+let country_pad = 0.06
+
+(* raw outline rings + region for a country name, regardless of detail *)
 let outline_of_name (outlines : Json.t option) name : (region * geom list) option
     =
   match outlines with
@@ -251,13 +277,8 @@ let outline_of_name (outlines : Json.t option) name : (region * geom list) optio
               Option.map geom_of_rings (Json.member "rings" e) )
           with
           | Some (Json.Arr [ Json.Num s; Json.Num w; Json.Num n; Json.Num e' ]),
-            Some rings ->
-              let npts =
-                List.fold_left (fun acc g -> acc + List.length g) 0 rings
-              in
-              if rings <> [] && npts >= min_outline_points then
-                Some ({ south = s; west = w; north = n; east = e' }, rings)
-              else None
+            Some rings when rings <> [] ->
+              Some ({ south = s; west = w; north = n; east = e' }, rings)
           | _ -> None)
       | None -> None)
   | None -> None
@@ -293,12 +314,13 @@ let country_available cache_dir country : bool =
   outline_of_name outlines cname <> None
   || place_country_center places cname <> None
 
-(* used by Generator: the region a (country NAME) map would show *)
+(* used by Generator: the region a (country NAME) map would show
+   (padded, like the render) *)
 let country_region cache_dir country : region option =
   let places, outlines = geodata cache_dir in
   let cname = places_alias places country in
   match outline_of_name outlines cname with
-  | Some (r, _) -> Some r
+  | Some (r, _) -> Some (pad_region country_pad r)
   | None -> (
       match place_country_center places cname with
       | Some (lat, lon, w_km) -> (
@@ -306,6 +328,16 @@ let country_region cache_dir country : region option =
           | Ok r -> Some r
           | Error _ -> None)
       | None -> None)
+
+(* used by Generator: is the country's outline detailed enough that its
+   map is a pure outline (vs. already a local Overpass map)?  city pages
+   of outlined countries get an additional local map of the city *)
+let country_outline_detailed cache_dir country : bool =
+  let places, outlines = geodata cache_dir in
+  let cname = places_alias places country in
+  match outline_of_name outlines cname with
+  | Some (_, rings) -> outline_detailed rings
+  | None -> false
 
 (* used by Generator: map marker coordinates for a city *)
 let city_coord cache_dir city : (float * float) option =
@@ -389,6 +421,11 @@ let load_region_json (cache_dir : string) (r : region) : (string, string) result
   if Sys.file_exists path then
     try Ok (Util.read_file path)
     with Sys_error e -> Error e
+  else if !dump_queries then begin
+    Util.ensure_dir cache_dir;
+    Util.write_file (path ^ ".query") (overpass_query r);
+    Error "not cached (query dumped for parallel fetch)"
+  end
   else if !offline then
     Error
       "offline build: not fetching map data (map appears the next time the \
@@ -766,10 +803,19 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
           let label_w =
             0.62 *. text_sz *. Float.of_int (String.length label)
           in
+          (* label right of the dot; if that overflows the frame, left of
+             it (end-anchored); if that would cross the left frame edge,
+             clamp it so the label always stays fully inside *)
+          let gap = 0.9 *. text_sz in
           let anchor, tx =
-            if x +. (1.5 *. text_sz) +. label_w > ml +. width then
-              ("text-anchor=\"end\" ", x -. (0.9 *. text_sz))
-            else ("", x +. (0.9 *. text_sz))
+            if x +. gap +. (0.6 *. text_sz) +. label_w <= ml +. width then
+              ("", x +. gap)
+            else
+              let lx = x -. gap in
+              if lx -. label_w >= ml then ("text-anchor=\"end\" ", lx)
+              else
+                ( "text-anchor=\"end\" ",
+                  Float.min (ml +. width) (ml +. label_w +. (0.2 *. text_sz)) )
           in
           add
             (Printf.sprintf
@@ -912,9 +958,10 @@ let render (cache_dir : string) (args : sexp list) : string =
           let places, outlines = geodata cache_dir in
           let cname = places_alias places name in
           match outline_of_name outlines cname with
-          | Some (r, rings) ->
+          | Some (r, rings) when outline_detailed rings ->
               (* explicit aspect wins; otherwise pad wide countries to the
                  3:1 banner but keep portrait countries natural *)
+              let r = pad_region country_pad r in
               let r =
                 match spec.aspect with
                 | Some a -> pad_to_aspect a r
@@ -922,6 +969,16 @@ let render (cache_dir : string) (args : sexp list) : string =
                     if natural_aspect r >= 3. then pad_to_aspect 3. r else r
               in
               finish spec r (List.map (fun g -> Outline g) rings)
+          | Some (r, _) ->
+              (* outline too coarse to draw (city-states): an Overpass
+                 map of its bbox instead; keeps the territory's own
+                 extent (Hong Kong incl. Lantau + airport) *)
+              let r =
+                match spec.aspect with
+                | Some a -> pad_to_aspect a (pad_region country_pad r)
+                | None -> pad_region country_pad r
+              in
+              via_overpass spec r
           | None -> (
               (* not in Natural Earth (islands, small city-states):
                  fall back to an Overpass map around its center *)
