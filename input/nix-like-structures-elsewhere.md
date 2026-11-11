@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "nix")
   (published "2022-06-09")
   (modified "2026-10-25")

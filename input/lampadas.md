@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "lisp")
   (published "2024-05-11")
   (modified "2026-10-25")

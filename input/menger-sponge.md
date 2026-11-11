@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "origami")
   (published "2021-02-04")
   (modified "2026-10-25")

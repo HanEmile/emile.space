@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "project" "jufo")
   (published "2017-01-01")
   (modified "2026-10-25")

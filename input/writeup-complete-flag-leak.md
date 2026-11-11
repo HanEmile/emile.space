@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "ctf" "writeup")
   (published "2020-06-01")
   (modified "2026-10-25")

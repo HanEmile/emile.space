@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "project" "game")
   (published "2019-01-01")
   (modified "2026-10-25")

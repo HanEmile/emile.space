@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "sport")
   (kind "sport")
   (published "2022-01-01")

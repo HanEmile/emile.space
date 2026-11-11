@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "rust" "stdlib")
   (published "2022-01-03")
   (modified "2026-10-25")

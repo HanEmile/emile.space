@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "ai" "rust")
   (published "2021-02-05")
   (modified "2026-10-25")

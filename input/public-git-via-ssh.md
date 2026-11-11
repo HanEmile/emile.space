@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "git" "ssh")
   (published "2022-09-01")
   (modified "2026-10-25")

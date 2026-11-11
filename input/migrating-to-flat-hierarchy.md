@@ -1,4 +1,5 @@
 (meta
+  (date "")
   (tag "blog" "vokobe")
   (published "2022-11-06")
   (modified "2026-10-25")
