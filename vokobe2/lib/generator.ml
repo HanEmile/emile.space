@@ -229,9 +229,38 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
       else if List.exists (fun (p : Page.page) -> p.name = slug) city_pages then None
       else
         let escaped = String.concat "\\\"" (String.split_on_char '"' country) in
+        (* country map with a marker for every city of the country that
+           has known coordinates and lies inside the shown region (e.g.
+           Phnom Penh and Siem Reap on the Cambodia map); cities outside
+           (islands on a mainland-only map) keep their own local maps *)
         let map_block =
           if Roughmap.country_available map_cache_dir country then
-            Printf.sprintf "(map (country \"%s\"))\n\n" escaped
+            let markers =
+              match Roughmap.country_region map_cache_dir country with
+              | Some (r : Roughmap.region) ->
+                  List.filter_map
+                    (fun (city, copt) ->
+                      if copt <> Some country then None
+                      else
+                        match Roughmap.city_coord map_cache_dir city with
+                        | Some (lat, lon)
+                          when lat >= r.south && lat <= r.north
+                               && lon >= r.west && lon <= r.east ->
+                            let escaped_city =
+                              String.concat "\\\""
+                                (String.split_on_char '"' city)
+                            in
+                            Some
+                              (Printf.sprintf "(marker %.5f %.5f \"%s\")" lat
+                                 lon escaped_city)
+                        | _ -> None)
+                    locations
+              | None -> []
+            in
+            Printf.sprintf "(map (country \"%s\")%s)\n\n" escaped
+              (match markers with
+               | [] -> ""
+               | ms -> " " ^ String.concat " " ms)
           else ""
         in
         Some ({
