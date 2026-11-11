@@ -22,6 +22,11 @@
   (info "published" "tag"))
 ```
 
+Event dates go in `(date "START" ["END"])`; pages without one are
+listed under their published date and reported during the build.
+`(date "")` marks a page as intentionally dateless (no date pages,
+no warning).
+
 ### queries
 
 For example this is what creates the list on the [blog](/blog) page:

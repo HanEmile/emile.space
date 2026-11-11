@@ -54,14 +54,19 @@ let () =
   let hidden_pages  = List.filter is_hidden loaded_pages in
 
   (* Pages without an explicit (date ...) meta are listed under their
-     published date; warn about them so dates can be added everywhere. *)
+     published date; warn about them so dates can be added everywhere.
+     Pages with (date "") are intentionally dateless and not warned. *)
   let undated =
     List.filter
-      (fun (p : Page.page) -> List.assoc_opt "date-start" p.Page.attrs = None)
+      (fun (p : Page.page) ->
+        List.assoc_opt "date-start" p.Page.attrs = None
+        && List.assoc_opt "dateless" p.Page.attrs = None)
       visible_pages
   in
   if undated <> [] then begin
-    Printf.printf "[!] %d pages without a date (listed by published):\n%!"
+    Printf.printf
+      "[!] %d pages without a date (listed by published; add (date \"\") \
+       to silence):\n%!"
       (List.length undated);
     List.iter
       (fun (p : Page.page) -> Printf.printf "      %s\n%!" p.Page.name)

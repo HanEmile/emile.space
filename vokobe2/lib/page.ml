@@ -119,9 +119,13 @@ let parse_attrs (raw : string) : (string * string list) list =
                    | [start; end_] ->
                        attrs := ("date-end", [end_]) :: !attrs;
                        attrs := ("date-start", [start]) :: !attrs
-                   | [single] ->
+                   | [single] when single <> "" ->
                        attrs := ("date-end", [single]) :: !attrs;
                        attrs := ("date-start", [single]) :: !attrs
+                   | [""] | [] ->
+                       (* (date ""): explicitly dateless - no date attrs,
+                           but not reported as "page without a date" *)
+                       attrs := ("dateless", ["true"]) :: !attrs
                    | _ -> ())
               | List (Atom key :: vals) ->
                   let str_vals =
