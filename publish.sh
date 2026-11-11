@@ -9,10 +9,9 @@ for arg in "$@"; do
   esac
 done
 
-BUILD_ARGS=""
+BUILD_ARGS="$*"
 SYNC_ARGS=""
 if [ "$VERBOSE" = "1" ]; then
-  BUILD_ARGS="--verbose"
   SYNC_ARGS="--verbose"
 fi
 

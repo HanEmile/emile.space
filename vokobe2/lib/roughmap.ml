@@ -28,6 +28,18 @@ let set_dump_queries v = dump_queries := v
 (* regions fetched during this build (for the build summary) *)
 let fetched = ref 0
 
+(* cumulative profiling (VOKOBE_PROFILE=1) *)
+let prof_time r f =
+  let t0 = Unix.gettimeofday () in
+  let v = f () in
+  r := !r +. (Unix.gettimeofday () -. t0);
+  v
+
+let prof_map_t = ref 0.
+let prof_map_n = ref 0
+let prof_disk_t = ref 0.
+let prof_json_t = ref 0.
+
 (* Public Overpass instances are flaky: try them in order until one works. *)
 let overpass_endpoints =
   [
@@ -419,7 +431,7 @@ let load_region_json (cache_dir : string) (r : region) : (string, string) result
     =
   let path = Filename.concat cache_dir (cache_filename r) in
   if Sys.file_exists path then
-    try Ok (Util.read_file path)
+    try Ok (prof_time prof_disk_t (fun () -> Util.read_file path))
     with Sys_error e -> Error e
   else if !dump_queries then begin
     Util.ensure_dir cache_dir;
@@ -663,6 +675,69 @@ let features_of_json (json_text : string) : (feature list, string) result =
       in
       Ok (List.concat_map feature_of_element elements)
 
+(* parsed features per region: Overpass JSON is large (MBs) and every
+   page renders twice, so without this cache the biggest cost of the
+   whole build is re-parsing the same files over and over *)
+let feature_cache : (string, (feature list, string) result) Hashtbl.t =
+  Hashtbl.create 64
+
+(* on-disk parsed-feature cache: unmarshal is ~10x faster than parsing
+   the multi-MB Overpass JSON.  Bump the magic whenever the feature
+   type layout changes; stale/corrupt bins are silently rebuilt. *)
+let bin_magic = "VOKOBE-FEATURES-1"
+
+let read_bin path : feature list option =
+  try
+    let ic = open_in_bin path in
+    match really_input_string ic (String.length bin_magic) with
+    | magic when magic = bin_magic ->
+        let v = (Marshal.from_channel ic : feature list) in
+        close_in ic;
+        Some v
+    | _ ->
+        close_in ic;
+        None
+  with _ -> None
+
+let write_bin path (fs : feature list) =
+  try
+    let oc = open_out_bin path in
+    output_string oc bin_magic;
+    Marshal.to_channel oc fs [];
+    close_out oc
+  with _ -> ()
+
+let region_features (cache_dir : string) (r : region) :
+    (feature list, string) result =
+  let key = cache_filename r in
+  match Hashtbl.find_opt feature_cache key with
+  | Some v -> v
+  | None ->
+      let path = Filename.concat cache_dir key in
+      let bin = path ^ ".bin" in
+      let v =
+        match
+          if Sys.file_exists bin then (
+            let fresh =
+              (Unix.stat bin).st_mtime >= (Unix.stat path).st_mtime
+            in
+            if fresh then read_bin bin else None)
+          else None
+        with
+        | Some fs -> Ok fs
+        | None -> (
+            match load_region_json cache_dir r with
+            | Error e -> Error e
+            | Ok json_text -> (
+                match features_of_json json_text with
+                | Ok fs ->
+                    write_bin bin fs;
+                    Ok fs
+                | Error e -> Error e))
+      in
+      Hashtbl.replace feature_cache key v;
+      v
+
 let render_svg (spec : spec) (r : region) (features : feature list) :
     (string, string) result =
   let markers = spec.markers in
@@ -896,7 +971,7 @@ let render_error (msg : string) : string =
     (%s)</div>"
     (svg_escape msg) (svg_escape msg)
 
-let render (cache_dir : string) (args : sexp list) : string =
+let render_ (cache_dir : string) (args : sexp list) : string =
   let finish spec r features =
     match render_svg spec r features with
     | Error e -> render_error e
@@ -941,12 +1016,9 @@ let render (cache_dir : string) (args : sexp list) : string =
   in
   (* road/water map of a region via cached Overpass data *)
   let via_overpass spec r =
-    match load_region_json cache_dir r with
+    match prof_time prof_json_t (fun () -> region_features cache_dir r) with
     | Error e -> render_error e
-    | Ok json_text -> (
-        match features_of_json json_text with
-        | Error e -> render_error e
-        | Ok features -> finish spec r features)
+    | Ok features -> finish spec r features
   in
   match parse_spec args with
   | Error e -> render_error e
@@ -988,3 +1060,7 @@ let render (cache_dir : string) (args : sexp list) : string =
                   | Error e -> render_error e
                   | Ok r -> via_overpass spec r)
               | None -> render_error ("no geodata for country " ^ name))))
+
+let render (cache_dir : string) (args : sexp list) : string =
+  incr prof_map_n;
+  prof_time prof_map_t (fun () -> render_ cache_dir args)

@@ -1,5 +1,13 @@
 open Vokobe2
 
+let prof_time name f =
+  let t0 = Unix.gettimeofday () in
+  let v = f () in
+  let dt = Unix.gettimeofday () -. t0 in
+  if Sys.getenv_opt "VOKOBE_PROFILE" = Some "1" then
+    Printf.eprintf "[prof] %-18s %8.2fs\n%!" name dt;
+  v
+
 let () =
   if Array.length Sys.argv < 4 then (
     Printf.eprintf
@@ -32,8 +40,10 @@ let () =
      is created on first use (see Roughmap.load_region_json). *)
   let map_cache_dir = Filename.concat input_dir "../map-cache" in
 
-  let loaded_pages = Page.load_pages input_dir
-                     |> Generator.add_date_range_str in
+  let loaded_pages =
+    prof_time "load_pages" (fun () ->
+        Page.load_pages input_dir |> Generator.add_date_range_str)
+  in
 
   (* Pages whose name starts with '.' are hidden drafts: rendered to HTML but
      excluded from all index pages, queries, and backlinks. *)
@@ -58,10 +68,17 @@ let () =
       undated
   end;
 
-  let tag_pages = Generator.generate_tag_pages visible_pages in
-  let date_pages = Generator.generate_date_pages visible_pages in
+  let tag_pages =
+    prof_time "gen_tags" (fun () -> Generator.generate_tag_pages visible_pages)
+  in
+  let date_pages =
+    prof_time "gen_dates" (fun () -> Generator.generate_date_pages visible_pages)
+  in
   let base_pages = visible_pages @ tag_pages @ date_pages in
-  let attr_pages = Generator.generate_location_pages ~map_cache_dir base_pages in
+  let attr_pages =
+    prof_time "gen_locations" (fun () ->
+        Generator.generate_location_pages ~map_cache_dir base_pages)
+  in
   let all_visible = base_pages @ attr_pages in
   Printf.printf "pages: %d (%d tag, %d date, %d attr, %d hidden)\n%!"
     (List.length all_visible)
@@ -91,11 +108,26 @@ let () =
     Util.write_file out_path html
   in
 
-  List.iter (render_page all_visible) all_visible;
-  (* Hidden pages are rendered with the visible context so their own queries
-     work, but they don't appear in any listing themselves. *)
-  List.iter (render_page all_visible) hidden_pages;
+  prof_time "render_all" (fun () ->
+      List.iter (render_page all_visible) all_visible;
+      (* Hidden pages are rendered with the visible context so their own
+         queries work, but they don't appear in any listing themselves. *)
+      List.iter (render_page all_visible) hidden_pages)
+  |> ignore;
   Printf.printf "wrote %d html files\n%!" (List.length all_visible + List.length hidden_pages);
+  if Sys.getenv_opt "VOKOBE_PROFILE" = Some "1" then begin
+    let prof = Printf.eprintf in
+    prof "[prof] ------------------------\n%!";
+    prof "[prof] queries:      %6.2fs  (%d calls)\n%!"
+      !Render.prof_query_t !Render.prof_query_n;
+    prof "[prof] navbar:       %6.2fs\n%!" !Render.prof_navbar_t;
+    prof "[prof] backlinks:    %6.2fs\n%!" !Render.prof_backlinks_t;
+    prof "[prof] sexp_parse:   %6.2fs\n%!" !Render.prof_sxparse_t;
+    prof "[prof] maps:         %6.2fs  (%d calls)\n%!"
+      !Roughmap.prof_map_t !Roughmap.prof_map_n;
+    prof "[prof]   disk read:  %6.2fs\n%!" !Roughmap.prof_disk_t;
+    prof "[prof]   json parse: %6.2fs\n%!" !Roughmap.prof_json_t
+  end;
   if !Roughmap.fetched > 0 then
     Printf.printf "[map] fetched %d new region(s) of external map data\n%!"
       !Roughmap.fetched;
@@ -113,4 +145,4 @@ let () =
                Util.ensure_dir (Filename.dirname dst);
                Util.write_file dst (Util.read_file src)))
   in
-  copy_non_md input_dir output_dir
+  prof_time "copy_files" (fun () -> copy_non_md input_dir output_dir)

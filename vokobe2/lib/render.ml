@@ -1,5 +1,18 @@
 open Sexp
 
+(* cumulative profiling, printed by bin/main.ml when VOKOBE_PROFILE=1 *)
+let prof_time r f =
+  let t0 = Unix.gettimeofday () in
+  let v = f () in
+  r := !r +. (Unix.gettimeofday () -. t0);
+  v
+
+let prof_query_t = ref 0.
+let prof_query_n = ref 0
+let prof_sxparse_t = ref 0.
+let prof_backlinks_t = ref 0.
+let prof_navbar_t = ref 0.
+
 type context = {
   pages : Page.page list;
   current : Page.page;
@@ -187,7 +200,7 @@ let rec eval_filter (pages : Page.page list) (p : Page.page) (sx : sexp) : bool 
       not (eval_filter pages p sub)
   | _ -> false
 
-let render_query (ctx : context) (args : sexp list) : string =
+let render_query_ (ctx : context) (args : sexp list) : string =
   let where_cond = ref (Atom "true") in
   let sort_key = ref "" in
   let sort_desc = ref false in
@@ -414,7 +427,12 @@ let render_query (ctx : context) (args : sexp list) : string =
       end
       else "<table>\n" ^ header_html ^ String.concat "" rows_html ^ "</table>"
 
+let render_query (ctx : context) (args : sexp list) : string =
+  incr prof_query_n;
+  prof_time prof_query_t (fun () -> render_query_ ctx args)
+
 let render_navbar (ctx : context) : string =
+  prof_time prof_navbar_t @@ fun () ->
   let nav_args = [
     List [Atom "where"; List [Atom "tag"; Atom "navbar"]];
     List [Atom "format"; Atom "list"];
@@ -441,7 +459,7 @@ let render_toc (headings : Heading.heading list) : string =
   in
   "<ul class=\"toc\">\n" ^ String.concat "" items ^ "</ul>"
 
-let render_backlinks (ctx : context) : string =
+let render_backlinks_ (ctx : context) : string =
   let target = ctx.current.name ^ ".md" in
   let refs =
     List.filter
@@ -459,6 +477,9 @@ let render_backlinks (ctx : context) : string =
           refs
       in
       "<div class=\"backlinks\">Backlinks<br>\n" ^ String.concat "" items ^ "</div>"
+
+let render_backlinks (ctx : context) : string =
+  prof_time prof_backlinks_t (fun () -> render_backlinks_ ctx)
 
 let known_inline_ops = [
   "nav"; "list-pages"; "toc"; "backlinks"; "site-name";
@@ -645,7 +666,9 @@ and render_line (ctx : context) (line : string) : string =
           incr i)
 
     else if c = '(' then (
-      match parse_sexp_at line !i with
+      match
+        prof_time prof_sxparse_t (fun () -> parse_sexp_at line !i)
+      with
       | List (Atom op :: _) as sexp, next when List.mem op known_inline_ops ->
           Buffer.add_string buf (eval ctx sexp);
           i := next
