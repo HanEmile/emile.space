@@ -1474,13 +1474,13 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
 |}
     (Util.html_escape ctx.current.title)
     (Util.html_escape site_name)
-    (Util.html_escape site_name)
     (match ctx.feed with
      | Some (file, tag) ->
          Printf.sprintf
            {|<link rel="alternate" type="application/rss+xml" title="%s" href="/%s">|}
            (Util.html_escape (site_name ^ " — " ^ tag)) file
      | None -> "")
+    (Util.html_escape site_name)
     (render_navbar ctx)
     (render_info_bar ctx)
     scope_style
