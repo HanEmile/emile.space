@@ -54,6 +54,9 @@ type context = {
   (* (book ...) chapter nesting depth; > 0 disables nested book ops so a
      book can never include itself (directly or transitively) *)
   book_depth : int;
+  (* optional git history: page name -> (created, modified, n_edits);
+     empty when history.json is absent *)
+  history : (string, int * int * int) Hashtbl.t;
 }
 
 let page_link (p : Page.page) : string = "/" ^ p.name
@@ -1297,6 +1300,21 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
   let backlinks =
     if ctx.backlinks_op_used then "" else render_backlinks ctx
   in
+  (* git archaeology line (tools/git-history.py via publish.sh) *)
+  let date_of epoch =
+    let tm = Unix.localtime (float_of_int epoch) in
+    Printf.sprintf "%04d-%02d-%02d" (tm.Unix.tm_year + 1900)
+      (tm.Unix.tm_mon + 1) tm.Unix.tm_mday
+  in
+  let hist_html =
+    match Hashtbl.find_opt ctx.history ctx.current.name with
+    | Some (created, modified, edits) ->
+        Printf.sprintf
+          {|<div class="history">created %s · %d edits · last edit %s</div>
+|}
+          (date_of created) edits (date_of modified)
+    | None -> ""
+  in
   Printf.sprintf
     {|<!DOCTYPE html>
 <html lang="en">
@@ -1313,8 +1331,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
     <a href="https://r2wa.rs">r2wa.rs</a>
   </header>
   <nav>%s</nav>
-  %s
-  <main%s>
+  %s%s  <main%s>
 %s%s  </main>
   <footer>
     <br><br><br>
@@ -1333,6 +1350,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
     (Util.html_escape site_name)
     (render_navbar ctx)
     (render_info_bar ctx)
+    hist_html
     scope_style
     backlinks
     body

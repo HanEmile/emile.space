@@ -60,6 +60,7 @@ let () =
         collect_only = false;
         backlinks_op_used = false;
         book_depth = 0;
+        history = Hashtbl.create 4;
       }
   in
   let contains = Vokobe2.Util.contains_substring in
@@ -166,5 +167,29 @@ Second paragraph.
   assert (contains html "old text." && contains html "new text.");
   assert (not (contains html "chapter-my-book"));
   assert (contains html {|<h1 id="old"|} && contains html {|<h1 id="new"|});
+
+  (* /now: current events beat past, future shows as upcoming *)
+  let ongoing =
+    mk_page "trip"
+      "(meta (date \"2026-11-01\" \"2026-11-20\") (location \"Berlin\" \"Germany\"))\n\n# Trip\n"
+  in
+  let later =
+    mk_page "later"
+      "(meta (date \"2026-12-01\" \"2026-12-05\") (location \"Rome\" \"Italy\"))\n\n# Later\n"
+  in
+  (match Vokobe2.Generator.generate_now_page ~today:"2026-11-13" [ongoing; later] with
+   | Some p -> assert (contains p.raw "right now" && contains p.raw "/trip")
+   | None -> assert false);
+  (match Vokobe2.Generator.generate_now_page ~today:"2026-11-25" [ongoing; later] with
+   | Some p ->
+       assert (contains p.raw "ended 2026-11-20"
+               && contains p.raw "Upcoming: [Later](/later)")
+   | None -> assert false);
+
+  (* /on-this-day: events cluster under their month-day section *)
+  (match Vokobe2.Generator.generate_on_this_day [ongoing] with
+   | Some p ->
+       assert (contains p.raw "## November 13" && contains p.raw "[Trip](/trip)")
+   | None -> assert false);
 
   print_endline "ok"

@@ -43,3 +43,6 @@ dedup-lab/
 
 # rendered map html cache (roughmap.ml render_cached)
 map-cache/svg-cache/
+
+# per-page git history for the info bar (tools/git-history.py)
+history.json

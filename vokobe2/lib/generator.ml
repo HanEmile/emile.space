@@ -590,3 +590,292 @@ let rss_xml ~(site_name : string) (pages : Page.page list) : string =
     items;
   Buffer.add_string buf "</channel>\n</rss>\n";
   Buffer.contents buf
+
+(* ---------------------------------------------------------------------------
+   on this day / now: cross-date views over the event date ranges *)
+
+(* "YYYY-MM-DD" -> (year, month, day) when well-formed *)
+let split_iso (s : string) =
+  match String.split_on_char '-' s with
+  | [y; m; d] -> (
+      try Some (int_of_string y, int_of_string m, int_of_string d)
+      with _ -> None)
+  | _ -> None
+
+(* every (month-day, page) pair covered by pages' date ranges
+   (date-range-str is precomputed by add_date_range_str) *)
+let month_day_events (pages : Page.page list) : (string * Page.page) list =
+  pages
+  |> List.concat_map (fun (p : Page.page) ->
+         match List.assoc_opt "date-range-str" p.Page.attrs with
+         | Some (s :: _) ->
+             s |> String.split_on_char ' '
+             |> List.filter_map (fun d ->
+                    match split_iso d with
+                    | Some (_, m, day) ->
+                        Some (Printf.sprintf "%02d-%02d" m day, p)
+                    | None -> None)
+         | _ -> [])
+
+let month_names_full =
+  [| "January"; "February"; "March"; "April"; "May"; "June"; "July";
+     "August"; "September"; "October"; "November"; "December" |]
+
+(* /on-this-day: one section per month-day that has any dated event *)
+let generate_on_this_day (pages : Page.page list) : Page.page option =
+  if List.exists (fun (p : Page.page) -> p.Page.name = "on-this-day") pages
+  then None
+  else
+    let events = month_day_events pages in
+    if events = [] then None
+    else
+      let tbl = Hashtbl.create 64 in
+      List.iter
+        (fun (md, p) ->
+          let prev =
+            match Hashtbl.find_opt tbl md with Some l -> l | None -> []
+          in
+          Hashtbl.replace tbl md (p :: prev))
+        events;
+      let days = Hashtbl.fold (fun k _ acc -> k :: acc) tbl [] in
+      let days = List.sort compare days in
+      let buf = Buffer.create 4096 in
+      Buffer.add_string buf
+        "# on this day\n\neverything that happened on a given day of the \
+         year, across all years.\n";
+      List.iter
+        (fun md ->
+          let m, d =
+            (int_of_string (String.sub md 0 2), int_of_string (String.sub md 3 2))
+          in
+          Buffer.add_string buf
+            (Printf.sprintf "\n## %s %d\n\n" month_names_full.(m - 1) d);
+          let ps = Hashtbl.find tbl md in
+          (* dedupe multi-day events appearing in several days of the
+             range; order newest first *)
+          let seen = Hashtbl.create 8 in
+          List.iter
+            (fun (p : Page.page) ->
+              if not (Hashtbl.mem seen p.Page.name) then begin
+                Hashtbl.replace seen p.Page.name ();
+                Buffer.add_string buf
+                  (Printf.sprintf "- [%s](/%s)\n"
+                     (Sexp.escaped_str p.Page.title) p.Page.name)
+              end)
+            ps)
+        days;
+      Some
+        ({
+           Page.name = "on-this-day";
+           title = "on this day";
+           attrs = [ ("tag", [ "meta" ]) ];
+           raw = Buffer.contents buf;
+         } : Page.page)
+
+(* /now: what am I doing TODAY, derived from event date ranges *)
+let generate_now_page ~(today : string) (pages : Page.page list)
+    : Page.page option =
+  let range_of (p : Page.page) =
+    match
+      ( List.assoc_opt "date-start" p.Page.attrs,
+        List.assoc_opt "date-end" p.Page.attrs )
+    with
+    | Some (s :: _), Some (e :: _) -> Some (s, e)
+    | _ -> None
+  in
+  let dated =
+    List.filter_map
+      (fun (p : Page.page) ->
+        match range_of p with
+        | Some (s, e) when s <= e -> Some (p, s, e)
+        | _ -> None)
+      pages
+  in
+  let loc (p : Page.page) =
+    match List.assoc_opt "location" p.Page.attrs with
+    | Some (l :: _) -> l
+    | _ -> "somewhere"
+  in
+  let fmt (p : Page.page) s e =
+    if s = e then
+      Printf.sprintf "today is [%s](/%s), in %s.\n" p.Page.title
+        p.Page.name (loc p)
+    else
+      Printf.sprintf "until %s: [%s](/%s), in %s.\n" e p.Page.title
+        p.Page.name (loc p)
+  in
+  let body =
+    (* current first (latest start), else the most recently ended past
+       event, else the nearest upcoming one *)
+    match
+      List.filter (fun (_, s, e) -> s <= today && today <= e) dated
+      |> List.sort (fun (_, s1, _) (_, s2, _) -> compare s2 s1)
+    with
+    | (p, s, e) :: _ -> "right now:\n\n" ^ fmt p s e
+    | [] -> (
+        let past =
+          List.filter (fun (_, _, e) -> e <= today) dated
+          |> List.sort (fun (_, _, e1) (_, _, e2) -> compare e2 e1)
+        and future =
+          List.filter (fun (_, s, _) -> s > today) dated
+          |> List.sort (fun (_, s1, _) (_, s2, _) -> compare s1 s2)
+        in
+        match past with
+        | (p, _, e) :: _ ->
+            Printf.sprintf
+              "as of my last update, I was at [%s](/%s) (ended %s).%s\n"
+              p.Page.title p.Page.name e
+              (match future with
+               | (f, s, _) :: _ ->
+                   Printf.sprintf " Upcoming: [%s](/%s) starting %s."
+                     f.Page.title f.Page.name s
+               | [] -> "")
+        | [] -> (
+            match future with
+            | (f, s, _) :: _ ->
+                Printf.sprintf "upcoming: [%s](/%s) starting %s, in %s.\n"
+                  f.Page.title f.Page.name s (loc f)
+            | [] -> ""))
+  in
+  if body = "" || List.exists (fun (p : Page.page) -> p.Page.name = "now") pages
+  then None
+  else
+    Some
+      ({
+         Page.name = "now";
+         title = "now";
+         attrs = [ ("tag", [ "meta" ]) ];
+         raw = "# now\n\n" ^ body;
+       } : Page.page)
+
+(* ---------------------------------------------------------------------------
+   static search: one precomputed result page per frequent token
+   (no javascript anywhere; works on file:// and site mirrors) *)
+
+let search_word_max_pages = 25
+let search_min_occurrences = 3
+
+(* index tokens of length 3..8 ([a-z0-9]+, lowercased) per page *)
+let tokenize (raw : string) : (string, int) Hashtbl.t =
+  let counts = Hashtbl.create 256 in
+  let n = String.length raw in
+  let i = ref 0 in
+  while !i < n do
+    let is_w c =
+      (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+      || (c >= 'A' && c <= 'Z')
+    in
+    if is_w raw.[!i] then begin
+      let start = !i in
+      while !i < n && is_w raw.[!i] do
+        incr i
+      done;
+      let wlen = !i - start in
+      if wlen >= 3 && wlen <= 8 then
+        let w = String.lowercase_ascii (String.sub raw start wlen) in
+        Hashtbl.replace counts w (1 + Option.value (Hashtbl.find_opt counts w) ~default:0)
+    end
+    else incr i
+  done;
+  counts
+
+(* first raw line containing [tok] (case-insensitive), parens replaced so
+   snippets can never be parsed as s-expressions, capped at 120 chars *)
+let snippet_of (tok : string) (raw : string) : string =
+  let n = String.length raw in
+  let tl = String.length tok in
+  let contains_at i =
+    let rec go j =
+      j >= tl
+      || (Char.lowercase_ascii raw.[i + j] = tok.[j] && go (j + 1))
+    in
+    i + tl <= n && go 0
+  in
+  let rec find_line pos =
+    if pos >= n then None
+    else
+      let stop =
+        match String.index_from_opt raw pos '\n' with
+        | Some nl -> nl
+        | None -> n
+      in
+      let rec found i = i < stop && (contains_at i || found (i + 1)) in
+      if found pos then Some (pos, stop) else find_line (stop + 1)
+  in
+  match find_line 0 with
+  | None -> ""
+  | Some (pos, stop) ->
+      let s = String.sub raw pos (min 120 (stop - pos)) in
+      String.map (fun c -> if c = '(' then '[' else if c = ')' then ']' else c) s
+      |> String.trim
+
+(* per token: one "search-TOKEN" page listing the pages it appears on,
+   name-match first, then by occurrence count *)
+(* index only the input-derived pages (not generated tag/date pages --
+   their template raws would pollute the index with query keywords) *)
+let generate_search_pages (pages : Page.page list) : Page.page list =
+  let per_token : (string, (Page.page * int) list ref) Hashtbl.t =
+    Hashtbl.create 4096
+  in
+  let total_occ : (string, int) Hashtbl.t = Hashtbl.create 4096 in
+  List.iter
+    (fun (p : Page.page) ->
+      let counts = tokenize p.Page.raw in
+      Hashtbl.iter
+        (fun tok cnt ->
+          let entry =
+            match Hashtbl.find_opt per_token tok with
+            | Some r -> r
+            | None ->
+                let r = ref [] in
+                Hashtbl.replace per_token tok r;
+                r
+          in
+          entry := (p, cnt) :: !entry;
+          Hashtbl.replace total_occ tok
+            (Option.value (Hashtbl.find_opt total_occ tok) ~default:0 + cnt))
+        counts)
+    pages;
+  Hashtbl.fold
+    (fun tok entry acc ->
+      let total = Hashtbl.find total_occ tok in
+      if total < search_min_occurrences
+         || List.exists (fun (p : Page.page) -> p.Page.name = "search-" ^ tok) pages
+      then acc
+      else
+        let rank (p : Page.page) =
+          (* exact page-name match, then name prefix, then the rest *)
+          if p.Page.name = tok then 0
+          else if String.starts_with ~prefix:tok p.Page.name then 1
+          else 2
+        in
+        let ranked =
+          List.sort
+            (fun (a, ca) (b, cb) ->
+              let ra, rb = (rank a, rank b) in
+              if ra <> rb then compare ra rb
+              else if ca <> cb then compare cb ca
+              else compare a.Page.name b.Page.name)
+            !entry
+        in
+        let shown = List.filteri (fun i _ -> i < search_word_max_pages) ranked in
+        let buf = Buffer.create 1024 in
+        Buffer.add_string buf
+          (Printf.sprintf "# search: %s\n\nfound on %d page(s):\n\n" tok
+             (List.length ranked));
+        List.iter
+          (fun (p, cnt) ->
+            let snip = snippet_of tok p.Page.raw in
+            Buffer.add_string buf
+              (Printf.sprintf "- [%s](/%s) (%dx)%s\n"
+                 (Sexp.escaped_str p.Page.title) p.Page.name cnt
+                 (if snip = "" then "" else " — " ^ snip)))
+          shown;
+        ({
+           Page.name = "search-" ^ tok;
+           title = "search: " ^ tok;
+           attrs = [ ("tag", [ "search" ]) ];
+           raw = Buffer.contents buf;
+         } : Page.page)
+        :: acc)
+    per_token []

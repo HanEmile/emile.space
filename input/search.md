@@ -2,53 +2,23 @@
   (date "")
   (published "2026-09-14")
   (modified "2026-11-13")
-  (author "Emile")
-)
+  (author "Emile"))
 
 # search
 
-Just go to:
+No javascript, no server round-trips: every frequently used word on
+this site has a **precomputed result page**, generated at build time:
 
-```
-https://emile.space/search/<search-query>.html
-```
+/search-<word>
 
-All 3-8 char values are precomputed using this bash script:
+for example [search-nixos](/search-nixos) or [search-map](/search-map).
+Words are lowercased, 3–8 chars long and appear at least three times
+across the site (~2000 index pages with ranked results and context
+snippets).
 
-```
-search () {
-  rg \
-    -g \!search \
-    -g "*.md" \
-    -C 3 \
-    -n \
-    --color=never \
-    --heading "$0" \
-    | awk '/^[^[:space:]]/ && /\.md$/ {
-      dir=$0; sub(/README.md/, "", dir);
-      print "</pre><a href=\"https://emile.space/" dir "\">/" dir "</a><pre>";
-      next
-    } {print}' \
-    > "search/$0.html"
-}
-export -f search
+Works just as well on site mirrors and downloaded copies (`file://`),
+which is the whole point.
 
-time \
-  fd \
-    -E search \
-    -e md . \
-      | xargs cat \
-      | sed "s/<.*>//g" \
-      | tr -C "a-zA-Z0-9" " " \
-      | tr "A-Z" "a-z" \
-      | tr " " "\n" \
-      | rg -o ".{3,8}$" \
-      | sort \
-      | uniq \
-      | xargs -n 1 bash -c "search '$@'"
- 
-# this is used by vokobe and should not be indexed
-rm search/index.html
-```
-
-
+(A previous incarnation of this page documented a bash one-liner that
+precomputed one HTML file per token for v1 of this site. Same idea —
+now native to the generator, with ranking and snippets.)
