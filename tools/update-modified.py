@@ -11,7 +11,7 @@ from pathlib import Path
 # inside quoted strings don't end the block early)
 from meta import meta_block
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent.parent  # tools/ is one level below the repo root
 INPUT = ROOT / "input"
 
 def main():

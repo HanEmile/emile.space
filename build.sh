@@ -35,9 +35,9 @@ echo "[+] done"
 if [ "$CHECK_LINKS" = "1" ]; then
   echo "[ ] checking links ..."
   if [ "$VERBOSE" = "1" ]; then
-    python3 check-links.py --verbose || true
+    python3 tools/check-links.py --verbose || true
   else
-    python3 check-links.py || true
+    python3 tools/check-links.py || true
   fi
 fi
 

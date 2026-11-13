@@ -21,20 +21,20 @@ if [ "$PREP" = "1" ]; then
   ./nixrun.sh '
 set -e
 echo "[ ] updating modified dates ..."
-python3 update-modified.py
+python3 tools/update-modified.py
 echo "[ ] updating map geodata ..."
-python3 update-map-geodata.py
+python3 tools/update-map-geodata.py
 if [ -d map-cache/osm ]; then
-  if python3 map-attrs-changed.py; then
+  if python3 tools/map-attrs-changed.py; then
     echo "[.] map regions unchanged"
   else
     echo "[ ] extracting missing map regions from local OSM dataset ..."
     (cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space --dump-missing-queries >/dev/null)
     if ls map-cache/*.query >/dev/null 2>&1; then
-      python3 extract-map-cache.py
+      python3 tools/extract-map-cache.py
     fi
     # repack the committed rich layer from the local region extracts
-    python3 build-world-rich.py
+    python3 tools/build-world-rich.py
   fi
 fi
 '

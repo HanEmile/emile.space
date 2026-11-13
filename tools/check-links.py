@@ -10,7 +10,7 @@ literal file output/x (e.g. "/style.css" -> output/style.css).
 External links (http(s)://...) are not checked -- they never were; the
 old server-based version of this script skipped them as well.
 
-Usage: python3 check-links.py [--verbose] [base_url]
+Usage: python3 tools/check-links.py [--verbose] [base_url]
 The base_url argument is deprecated and ignored (no server needed).
 """
 
@@ -23,7 +23,7 @@ args = sys.argv[1:]
 VERBOSE = "--verbose" in args
 args = [a for a in args if not a.startswith("--")]
 BASE_URL = args[0] if args else None
-OUTPUT = Path(__file__).parent / "output"
+OUTPUT = Path(__file__).parent.parent / "output"
 
 def extract_links(html: str) -> set[str]:
     links = set()

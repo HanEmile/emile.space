@@ -9,15 +9,15 @@
 # let extract-map-cache.py rebuild every map-cache/<region>.json
 # completely offline (also for future regions).
 #
-# Run inside nix:  nix-shell shell.nix --run './fetch-osm-dataset.sh'
+# Run inside nix:  nix-shell shell.nix --run './tools/tools/fetch-osm-dataset.sh'
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 OUT=map-cache/osm
 mkdir -p "$OUT"
 
 # single source of truth: mapconsts.EXTRACTS (used by
 # extract-map-cache.py's country->extract mapping)
-EXTRACTS="$(python3 extract-map-cache.py --list-extracts)"
+EXTRACTS="$(python3 tools/extract-map-cache.py --list-extracts)"
 
 FILTER_EXPRS=(
   'w/highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary'

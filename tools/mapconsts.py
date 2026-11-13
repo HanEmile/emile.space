@@ -2,13 +2,13 @@
 
 Single source for the Geofabrik extract catalog: extract-map-cache.py
 maps regions to extracts, fetch-osm-dataset.sh downloads them (via
-`python3 -c 'import mapconsts; ...'` or `python3 extract-map-cache.py
+`python3 -c 'import mapconsts; ...'` or `python3 tools/extract-map-cache.py
 --list-extracts`).
 """
 import os
 import re
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # tools/ is one level below the repo root
 CACHE = os.path.join(ROOT, "map-cache")
 
 NE_LOCAL = os.path.join(CACHE, "ne_50m_admin_0_countries.geojson")

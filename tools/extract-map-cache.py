@@ -10,7 +10,7 @@ Overpass-JSON shape vokobe2/lib/roughmap.ml renders, dropping the .query
 file on success.
 
 Regions whose country extract is missing are kept as .query files.
-Run inside nix:  nix-shell shell.nix --run 'python3 extract-map-cache.py'
+Run inside nix:  nix-shell shell.nix --run 'python3 tools/extract-map-cache.py'
 """
 import json, os, subprocess, sys, tempfile
 

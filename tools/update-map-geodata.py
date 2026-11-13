@@ -17,7 +17,7 @@ import meta as meta_mod
 from mapconsts import CACHE, NE_LOCAL, OUTLINES_OUT, PLACES_OUT, GEODATA_STAMP
 from maptools import rdp
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STAMP = GEODATA_STAMP
 NE_URL = ("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
           "master/geojson/ne_50m_admin_0_countries.geojson")
