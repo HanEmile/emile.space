@@ -60,10 +60,9 @@ let merge_attrs (attrs_rev : (string * string list) list) : (string * string lis
 
 (* (location "City") or (location "City" "Country") -> location/country attrs *)
 let location_attrs (vals : sexp list) : (string * string list) list =
-  let str_vals = List.filter_map (function Atom s -> Some s | _ -> None) vals in
-  match str_vals with
+  match atoms vals with
   | [city; country] -> [("country", [country]); ("location", [city])]
-  | _ -> [("location", str_vals)]
+  | str_vals -> [("location", str_vals)]
 
 (* Character ranges [start, stop) covered by fenced code blocks, so that
    example s-expressions inside ``` blocks are not treated as metadata. *)
@@ -110,12 +109,7 @@ let parse_attrs (raw : string) : (string * string list) list =
               | List (Atom "location" :: vals) ->
                   attrs := location_attrs vals @ !attrs
               | List (Atom ("date-range" | "date") :: vals) ->
-                  let str_vals =
-                    List.filter_map
-                      (function Atom s -> Some s | _ -> None)
-                      vals
-                  in
-                  (match str_vals with
+                  (match atoms vals with
                    | [start; end_] ->
                        attrs := ("date-end", [end_]) :: !attrs;
                        attrs := ("date-start", [start]) :: !attrs
@@ -128,12 +122,7 @@ let parse_attrs (raw : string) : (string * string list) list =
                        attrs := ("dateless", ["true"]) :: !attrs
                    | _ -> ())
               | List (Atom key :: vals) ->
-                  let str_vals =
-                    List.filter_map
-                      (function Atom s -> Some s | _ -> None)
-                      vals
-                  in
-                  attrs := (key, str_vals) :: !attrs
+                  attrs := (key, atoms vals) :: !attrs
               | _ -> ())
             entries;
           pos := next_pos

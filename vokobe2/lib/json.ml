@@ -176,10 +176,6 @@ let as_float = function Num n -> Some n | _ -> None
 let as_string = function Str s -> Some s | _ -> None
 let as_list = function Arr xs -> Some xs | _ -> None
 
-let get_float key j = match member key j with
-  | Some v -> as_float v
-  | None -> None
+let get_float key j = Option.bind (member key j) as_float
 
-let get_string key j = match member key j with
-  | Some v -> as_string v
-  | None -> None
+let get_string key j = Option.bind (member key j) as_string

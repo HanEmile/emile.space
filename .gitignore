@@ -37,3 +37,6 @@ map-cache/osm/
 
 # backups & migration leftovers (local only)
 *.bak
+
+# ast auto-dedup experiment (tool + source copies)
+dedup-lab/

@@ -74,6 +74,10 @@ let parse_sexp_at (s : string) (start : int) : sexp * int =
   let result = read () in
   (result, !pos)
 
+(* the atom payloads of a sexp list, other forms dropped *)
+let atoms (xs : sexp list) : string list =
+  List.filter_map (function Atom s -> Some s | _ -> None) xs
+
 (* escape s for embedding in a "..." string literal of an s-expression
    (used when generating (query ...)/(map ...) sources) *)
 let escaped_str (s : string) : string =

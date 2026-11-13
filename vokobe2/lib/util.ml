@@ -1,3 +1,10 @@
+(* cumulative profiling: time one action, add the delta onto the ref *)
+let prof_time r f =
+  let t0 = Unix.gettimeofday () in
+  let v = f () in
+  r := !r +. (Unix.gettimeofday () -. t0);
+  v
+
 let read_file (path : string) : string =
   let ic = open_in_bin path in
   let n = in_channel_length ic in

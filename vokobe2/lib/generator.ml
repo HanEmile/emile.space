@@ -45,13 +45,30 @@ let add_date_range_str (pages : Page.page list) : Page.page list =
     | _ -> p)
   pages
 
+(* a page's tags, [] when untagged *)
+let tags_of_page (p : Page.page) : string list =
+  Option.value ~default:[] (List.assoc_opt "tag" p.Page.attrs)
+
 let collect_all_tags (pages : Page.page list) : string list =
-  pages
-  |> List.concat_map (fun p ->
-         match List.assoc_opt "tag" p.Page.attrs with
-         | Some tags -> tags
-         | None -> [])
-  |> List.sort_uniq String.compare
+  pages |> List.concat_map tags_of_page |> List.sort_uniq String.compare
+
+(* one generated pseudo-page per key (index pages for tags, dates, ...);
+   a real page with the key's name always wins, only attrs/raw differ per
+   generator *)
+let gen_index_pages base_pages keys attrs_of raw_of : Page.page list =
+  List.filter_map
+    (fun key ->
+      if List.exists (fun (p : Page.page) -> p.name = key) base_pages then
+        None
+      else
+        Some
+          ({
+            Page.name = key;
+            title = key;
+            attrs = attrs_of key;
+            raw = raw_of key;
+          } : Page.page))
+    keys
 
 let make_umbrella_page (attr : string) (pages : Page.page list) : Page.page option =
   if List.exists (fun (p : Page.page) -> p.name = attr) pages then None
@@ -72,32 +89,20 @@ let make_umbrella_page (attr : string) (pages : Page.page list) : Page.page opti
     } : Page.page)
 
 let generate_tag_pages (pages : Page.page list) : Page.page list =
-  let tags = collect_all_tags pages in
-  let individual = List.filter_map
-    (fun tag ->
-      if List.exists (fun (p : Page.page) -> p.name = tag) pages then
-        None
-      else
-        Some
-          ({
-            name = tag;
-            title = tag;
-            attrs = [
-              ("tag", ["tag"]);
-            ];
-            raw =
-              Printf.sprintf
-              {|# %s
+  let individual =
+    gen_index_pages pages (collect_all_tags pages)
+      (fun _ -> [("tag", ["tag"])])
+      (fun tag ->
+        Printf.sprintf
+        {|# %s
 
-                (query
-                  (where (tag "%s"))
-                  (sort "date" desc)
-                  (group year "date" desc)
-                  (cols ("Title" "title") ("Date" "date"))
-                  (format table))|}
-                tag tag;
-          } : Page.page))
-    tags
+          (query
+            (where (tag "%s"))
+            (sort "date" desc)
+            (group year "date" desc)
+            (cols ("Title" "title") ("Date" "date"))
+            (format table))|}
+          tag tag)
   in
   let umbrella = make_umbrella_page "tag" (pages @ individual) in
   individual @ Option.to_list umbrella
@@ -137,14 +142,23 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
         | _ -> loc)
       locations
   in
+  (* slug-named page for one location string; skipped when the slug is
+     empty or the name is already taken (real pages first, then earlier
+     generated ones) *)
+  let safe_page ~also ~title ~attrs raw : Page.page option =
+    let slug = Util.sanitize title in
+    if slug = "" then None
+    else if
+      List.exists
+        (fun (p : Page.page) -> p.Page.name = slug)
+        (pages @ also)
+    then None
+    else Some ({Page.name = slug; title; attrs; raw} : Page.page)
+  in
   let city_pages = List.filter_map
     (fun (city, country_opt) ->
       (* country-only locations are handled by the country page *)
       if country_opt = Some city then None
-      else
-      let slug = Util.sanitize city in
-      if slug = "" then None
-      else if List.exists (fun (p : Page.page) -> p.name = slug) pages then None
       else
         let escaped = Sexp.escaped_str city in
         (* Show the country in the info bar; excluded from country listings *)
@@ -167,9 +181,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
               | Some (lat, lon) ->
                   let in_country =
                     match Roughmap.country_region_full map_cache_dir country with
-                    | Some (r : Roughmap.region) ->
-                        lat >= r.south && lat <= r.north && lon >= r.west
-                        && lon <= r.east
+                    | Some r -> Roughmap.lat_lon_in_region r lat lon
                     | None -> false
                   in
                   if in_country then
@@ -183,21 +195,16 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
               | None -> "")
           | _ -> ""
         in
-        Some ({
-          Page.name = slug;
-          title = city;
-          attrs;
-          raw =
-            Printf.sprintf
-            {|# %s
+        safe_page ~also:[] ~title:city ~attrs
+          (Printf.sprintf
+          {|# %s
 
 %s              (query
                 (where (has "location" "%s"))
                 (sort "date" desc)
                 (cols ("Title" "title") ("Date" "date"))
                 (format table))|}
-            city map_block escaped;
-        } : Page.page))
+          city map_block escaped))
     locations
   in
   let countries =
@@ -207,11 +214,6 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
   in
   let country_pages = List.filter_map
     (fun country ->
-      let slug = Util.sanitize country in
-      if slug = "" then None
-      else if List.exists (fun (p : Page.page) -> p.name = slug) pages then None
-      else if List.exists (fun (p : Page.page) -> p.name = slug) city_pages then None
-      else
         let escaped = Sexp.escaped_str country in
         (* country map with a marker for every city of the country that
            has known coordinates and lies inside the shown region (e.g.
@@ -221,15 +223,14 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
           if Roughmap.country_available map_cache_dir country then
             let markers =
               match Roughmap.country_region_full map_cache_dir country with
-              | Some (r : Roughmap.region) ->
+              | Some r ->
                   List.filter_map
                     (fun (city, copt) ->
                       if copt <> Some country then None
                       else
                         match Roughmap.city_coord map_cache_dir city with
                         | Some (lat, lon)
-                          when lat >= r.south && lat <= r.north
-                               && lon >= r.west && lon <= r.east ->
+                          when Roughmap.lat_lon_in_region r lat lon ->
                             Some (map_marker lat lon city)
                         | _ -> None)
                     locations
@@ -241,13 +242,9 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
                | ms -> " " ^ String.concat " " ms)
           else ""
         in
-        Some ({
-          Page.name = slug;
-          title = country;
-          attrs = [("tag", ["location"])];
-          raw =
-            Printf.sprintf
-            {|# %s
+        safe_page ~also:city_pages ~title:country ~attrs:[("tag", ["location"])]
+          (Printf.sprintf
+          {|# %s
 
 %s              (query
                 (where
@@ -258,8 +255,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
                 (group field "location" "country")
                 (cols ("Title" "title") ("Date" "date"))
                 (format table))|}
-            country map_block escaped escaped;
-        } : Page.page))
+          country map_block escaped escaped))
     countries
   in
   let all_generated = city_pages @ country_pages in
@@ -363,16 +359,11 @@ let collect_date_keys (pages : Page.page list) : string list =
   List.sort_uniq String.compare keys
 
 let generate_date_pages (pages : Page.page list) : Page.page list =
-  let date_keys = collect_date_keys pages in
-  let individual = List.filter_map
-    (fun key ->
-      if List.exists (fun (p : Page.page) -> p.name = key) pages then
-        (* a real page with this name wins, like in the other generators *)
-        None
-      else
-      let name = key in
-      let title = key in
-      let raw =
+  let individual =
+    gen_index_pages pages (collect_date_keys pages)
+      (fun key ->
+        [("tag", ["date"]); ("published", [key]); ("modified", [key])])
+      (fun key ->
         Printf.sprintf
         {|# %s
 
@@ -387,19 +378,7 @@ let generate_date_pages (pages : Page.page list) : Page.page list =
                   ("Date" "date")
                   ("Tags" "tag"))
             (format table))|}
-          key key key
-      in
-      Some ({
-        name;
-        title;
-        attrs = [
-          ("tag", ["date"]);
-          ("published", [key]);
-          ("modified", [key]);
-        ];
-        raw;
-      } : Page.page))
-    date_keys
+          key key key)
   in
   let umbrella = make_umbrella_page "date" (pages @ individual) in
   individual @ Option.to_list umbrella
@@ -546,10 +525,7 @@ let rss_xml ~(site_name : string) (pages : Page.page list) : string =
   let items =
     pages
     |> List.filter (fun (p : Page.page) ->
-           (match List.assoc_opt "tag" p.Page.attrs with
-            | Some tags -> List.mem "blog" tags
-            | None -> false)
-           && published p <> None)
+           List.mem "blog" (tags_of_page p) && published p <> None)
     |> List.sort (fun a b -> compare (published b) (published a))
   in
   let items =
