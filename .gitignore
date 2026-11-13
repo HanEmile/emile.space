@@ -8,9 +8,6 @@ __pycache__/
 output/
 vokobe2/_build/
 
-# generated API docs of the OCaml generator (ocamldoc)
-doc/
-
 # interrupted Overpass downloads
 map-cache/*.tmp
 map-cache/*.query
