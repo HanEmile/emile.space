@@ -56,9 +56,7 @@ def exists(path: str) -> bool:
     return (OUTPUT / rel).is_file()
 
 def main() -> int:
-    if BASE_URL is not None:
-        print(f"note: base-URL argument ({BASE_URL}) is deprecated; "
-              f"checking output/ on disk instead")
+    _ = BASE_URL  # deprecated argument, accepted for compatibility
     all_links: set[str] = set()
     for html_file in OUTPUT.glob("*.html"):
         if html_file.name.startswith("."):
@@ -66,12 +64,16 @@ def main() -> int:
         text = html_file.read_text(encoding="utf-8", errors="ignore")
         all_links |= extract_links(text)
 
-    print(f"Found {len(all_links)} unique local links across all pages")
-    print(f"Checking against {OUTPUT}/ ...\n")
+    if VERBOSE:
+        print(f"Found {len(all_links)} unique local links across all pages")
+        print(f"Checking against {OUTPUT}/ ...\n")
 
     broken = sorted(link for link in all_links if not exists(link))
     ok = len(all_links) - len(broken)
-    print(f"links: {ok} ok, {len(broken)} broken")
+    if broken:
+        print(f"links: {ok} ok, {len(broken)} broken")
+    else:
+        print(f"[+] links: {ok} ok")
 
     if broken and VERBOSE:
         print(f"\n--- broken ({len(broken)}) ---")

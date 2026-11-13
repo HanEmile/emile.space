@@ -50,9 +50,13 @@ def main():
         print(f"  {name}: {current} -> {mtime}")
         ok += 1
 
-    print(f"updated modified: {ok}")
-    for name, why in skipped:
-        print(f"  skipped {name}: {why}")
+    if ok:
+        print(f"[+] modified dates updated: {ok}")
+    else:
+        print("[.] modified dates unchanged")
+    if os.environ.get("VERBOSE") == "1":
+        for name, why in skipped:
+            print(f"  skipped {name}: {why}")
     for name, why in failed:
         print(f"  FAILED  {name}: {why}")
     if failed:

@@ -154,7 +154,7 @@ saved_mtime, saved_fp = stamp_saved()
 cur_mtime = stamp_current()[0]
 if (os.path.exists(OUTLINES_OUT) and os.path.exists(PLACES_OUT)
         and saved_mtime >= cur_mtime and saved_fp == input_fingerprint()):
-    print("map geodata unchanged (map-cache/.geodata.stamp)")
+    print("[.] map geodata unchanged")
     sys.exit(0)
 
 # ---------------- country outlines -------------------------------------------------
