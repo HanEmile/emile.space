@@ -1344,70 +1344,6 @@ let render_body (ctx : context) (raw : string) : string =
 
 (* O(h + len body) plus one navbar query O(n * a); h = headings,
    n = pages, a = attrs/page.  Called once per page in the hot path. *)
-(* related pages: backlink-graph neighbors (either direction) plus a
-   bonus per shared tag; generated pages (search results, date/tag
-   indexes, ...) never appear.  The adjacency map is cached per
-   pages-list identity like the backlink index. *)
-let adjacency_cache :
-    (Page.page list * (string, (string * int) list) Hashtbl.t) option ref =
-  ref None
-
-let adjacency_of (pages : Page.page list) :
-    (string, (string * int) list) Hashtbl.t =
-  match !adjacency_cache with
-  | Some (key, adj) when key == pages -> adj
-  | _ ->
-      let adj = Hashtbl.create 256 in
-      let bump a b =
-        let l =
-          match Hashtbl.find_opt adj a with Some l -> l | None -> []
-        in
-        match List.assoc_opt b l with
-        | Some w ->
-            Hashtbl.replace adj a ((b, w + 1) :: List.remove_assoc b l)
-        | None -> Hashtbl.replace adj a ((b, 1) :: l)
-      in
-      Hashtbl.iter
-        (fun target bls ->
-          List.iter
-            (fun bl ->
-              bump bl.b_page.Page.name target;
-              bump target bl.b_page.Page.name)
-            bls)
-        (build_backlinks pages);
-      adjacency_cache := Some (pages, adj);
-      adj
-
-(* real (non-generated) pages only; O(degree). *)
-let related_of (ctx : context) : Page.page list =
-  let me = ctx.current in
-  match Hashtbl.find_opt (adjacency_of ctx.pages) me.Page.name with
-  | None -> []
-  | Some nbs ->
-      let my_tags = tags_of me in
-      nbs
-      |> List.filter_map (fun (name, w) ->
-             if name = me.Page.name then None
-             else
-               match Hashtbl.find_opt ctx.page_index name with
-               | Some p ->
-                   let gen_tags = tags_of p in
-                   if
-                     List.exists
-                       (fun t -> List.mem t [ "meta"; "date"; "search"; "city"; "location"; "tag" ])
-                       gen_tags
-                   then None
-                   else
-                     let shared =
-                       List.length
-                         (List.filter (fun t -> List.mem t my_tags) gen_tags)
-                     in
-                     Some (p, w + shared)
-               | None -> None)
-      |> List.sort (fun (_, s1) (_, s2) -> compare s2 s1)
-      |> (fun l -> List.filteri (fun i _ -> i < 3) l)
-      |> List.map fst
-
 let _ = render_body_late := render_body
 
 let render_html (site_name : string) (ctx : context) (body : string) : string =
@@ -1425,20 +1361,6 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
      already renders a box itself via (backlinks).  O(1) lookup. *)
   let backlinks =
     if ctx.backlinks_op_used then "" else render_backlinks ctx
-  in
-  let related_html =
-    match related_of ctx with
-    | [] -> ""
-    | ps ->
-        let links =
-          List.map
-            (fun p ->
-              Printf.sprintf "<a href=\"%s\">%s</a>" (page_link p)
-                (Util.html_escape p.Page.title))
-            ps
-        in
-        "<div class=\"related\">see also: " ^ String.concat " · " links
-        ^ "</div>"
   in
   Printf.sprintf
     {|<!DOCTYPE html>
@@ -1459,7 +1381,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
   <nav>%s</nav>
   %s
   <main%s>
-%s%s%s  </main>
+%s%s  </main>
   <footer>
     <br><br><br>
     <a href="https://social.emile.space/@hanemile/feed.rss" target="_blank" rel="noopener" class="icon"><img class="webring" src="/rss.svg" alt="rss" height="32px"/></a>
@@ -1486,5 +1408,4 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
     scope_style
     backlinks
     body
-    related_html
     (Util.html_escape site_name)
