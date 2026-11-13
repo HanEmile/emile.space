@@ -257,11 +257,17 @@ svg.roughmap .shaded { fill: rgba(214, 165, 25, 0.30); }
    read as inverted chips on them (the number's self-anchor and, in
    books, the chapter title's page link alike) */
 h1, h2, h3, h4, h5 { color: #040404; }
+/* the 0.3ex overpaint (+ equal negative margin) makes the chip
+   background slightly taller than its line box: at fractional zoom
+   levels the bar color can no longer peek out above/below the chip
+   (sub-pixel bleed), while layout stays identical */
 @media (prefers-color-scheme: light) {
-  h1 a, h2 a, h3 a, h4 a, h5 a { color: #040404; background: #ffffff; }
+  h1 a, h2 a, h3 a, h4 a, h5 a { color: #040404; background: #ffffff;
+    padding: 0.3ex 0; margin: -0.3ex 0; }
 }
 @media (prefers-color-scheme: dark) {
-  h1 a, h2 a, h3 a, h4 a, h5 a { color: #dddddd; background: #040404; }
+  h1 a, h2 a, h3 a, h4 a, h5 a { color: #dddddd; background: #040404;
+    padding: 0.3ex 0; margin: -0.3ex 0; }
 }
 
 /* chapter title bars (number self-anchor + standalone-page link): flex
