@@ -963,6 +963,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>%s</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="alternate" type="application/rss+xml" title="%s" href="/rss.xml">
 </head>
 <body>
   <header>
@@ -986,6 +987,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
 </html>
 |}
     (Util.html_escape ctx.current.title)
+    (Util.html_escape site_name)
     (Util.html_escape site_name)
     (render_navbar ctx)
     (render_info_bar ctx)

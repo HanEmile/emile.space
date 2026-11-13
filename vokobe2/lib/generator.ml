@@ -435,3 +435,204 @@ let generate_date_pages (pages : Page.page list) : Page.page list =
   in
   let umbrella = make_umbrella_page "date" (pages @ individual) in
   individual @ Option.to_list umbrella
+
+(* -- RSS feed ---------------------------------------------------------------
+
+   rss.xml at the site root, mirroring the /blog page: every visible page
+   tagged "blog", newest published date first. *)
+
+let rss_day_names = [| "Thu"; "Fri"; "Sat"; "Sun"; "Mon"; "Tue"; "Wed" |]
+let rss_month_names =
+  [| "Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun";
+     "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec" |]
+
+let days_since_epoch y m d =
+  let days = ref 0 in
+  for yy = 1970 to y - 1 do
+    days := !days + if is_leap_year yy then 366 else 365
+  done;
+  for mm = 1 to m - 1 do
+    days := !days + days_in_month y mm
+  done;
+  !days + d - 1
+
+(* "2026-11-13" -> "Fri, 13 Nov 2026 00:00:00 +0000" *)
+let rfc822_of_iso (iso : string) : string option =
+  match String.split_on_char '-' (String.trim iso) with
+  | [y; m; d] -> (
+      try
+        let y = int_of_string y and m = int_of_string m and d = int_of_string d in
+        if m < 1 || m > 12 || d < 1 || y < 1970 then None
+        else
+          let wd = rss_day_names.(days_since_epoch y m d mod 7) in
+          Some
+            (Printf.sprintf "%s, %02d %s %04d 00:00:00 +0000" wd d
+               rss_month_names.(m - 1) y)
+      with _ -> None)
+  | _ -> None
+
+(* [text](url) / ![alt](url) -> text, other markdown chars dropped *)
+let strip_markdown (s : string) : string =
+  let n = String.length s in
+  let b = Buffer.create n in
+  let rec aux i =
+    if i >= n then ()
+    else
+      let i = if s.[i] = '!' && i + 1 < n && s.[i + 1] = '[' then i + 1 else i in
+      if s.[i] = '[' then (
+        match String.index_from_opt s (i + 1) ']' with
+        | Some j when j + 1 < n && s.[j + 1] = '(' ->
+            Buffer.add_substring b s (i + 1) (j - i - 1);
+            aux (match String.index_from_opt s (j + 2) ')' with
+                 | Some k -> k + 1
+                 | None -> j + 1)
+        | Some j ->
+            Buffer.add_substring b s (i + 1) (j - i - 1);
+            aux (j + 1)
+        | None -> aux (i + 1))
+      else (
+        (match s.[i] with
+         | '`' | '*' | '_' | '#' | '~' -> ()
+         | '<' | '>' -> Buffer.add_char b ' '
+         | c -> Buffer.add_char b c);
+        aux (i + 1))
+  in
+  aux 0;
+  Buffer.contents b
+
+(* first prose paragraph of a page (meta/queries skipped, markup stripped),
+   capped at 280 chars, for <description> *)
+let excerpt_of_raw (raw : string) : string =
+  let n = String.length raw in
+  (* skip leading whitespace and balanced (sexp ...) blocks *)
+  let pos = ref 0 in
+  let rec skip_ws () =
+    while !pos < n && (raw.[!pos] = ' ' || raw.[!pos] = '\t' || raw.[!pos] = '\n' || raw.[!pos] = '\r') do
+      incr pos
+    done
+  in
+  let rec skip_sexp () =
+    skip_ws ();
+    if !pos < n && raw.[!pos] = '(' then begin
+      let depth = ref 0 in
+      while !pos < n && (!depth > 0 || raw.[!pos] = '(') do
+        if raw.[!pos] = '(' then incr depth
+        else if raw.[!pos] = ')' then decr depth;
+        incr pos
+      done;
+      skip_sexp ()
+    end
+  in
+  skip_sexp ();
+  (* drop every remaining (sexp ...) block -- (toc), (query ...), (map ...)
+     etc. -- tracking strings so quoted parens don't break the depth count *)
+  let prose = Buffer.create (n - !pos) in
+  let depth = ref 0 and in_str = ref false and esc = ref false in
+  for i = !pos to n - 1 do
+    let c = raw.[i] in
+    if !esc then esc := false
+    else if !in_str then (
+      if c = '\\' then esc := true else if c = '"' then in_str := false)
+    else if c = '"' && !depth > 0 then in_str := true
+    else if c = '(' then incr depth
+    else if c = ')' then (if !depth > 0 then decr depth)
+    else if !depth = 0 then Buffer.add_char prose c
+  done;
+  let text = Buffer.contents prose in
+  let tn = String.length text in
+  (* split into paragraphs (blank-line separated), then take the first
+     paragraph that has prose text -- headings and tables don't count *)
+  let rec paragraphs acc cur p =
+    if p > tn then List.rev (cur :: acc)
+    else
+      let line, next =
+        match String.index_from_opt text p '\n' with
+        | Some nl -> (String.sub text p (nl - p), nl + 1)
+        | None -> (String.sub text p (tn - p), tn + 1)
+      in
+      if String.trim line = "" then paragraphs (cur :: acc) [] next
+      else paragraphs acc (line :: cur) next
+  in
+  let is_prose line =
+    let t = String.trim line in
+    t <> "" && t.[0] <> '#' && t.[0] <> '|'
+  in
+  let rec first_prose = function
+    | [] -> []
+    | para :: rest ->
+        let lines = para |> List.rev |> List.filter is_prose in
+        if lines = [] then first_prose rest else lines
+  in
+  let lines = first_prose (paragraphs [] [] 0) in
+  let s = String.concat " " (List.map strip_markdown lines) |> String.trim in
+  if String.length s <= 280 then s
+  else String.sub s 0 280 ^ "…"
+
+let rss_xml ~(site_name : string) (pages : Page.page list) : string =
+  let base = "https://" ^ site_name in
+  let published (p : Page.page) =
+    match List.assoc_opt "published" p.Page.attrs with
+    | Some (d :: _) -> Some d
+    | _ -> None
+  in
+  let items =
+    pages
+    |> List.filter (fun (p : Page.page) ->
+           (match List.assoc_opt "tag" p.Page.attrs with
+            | Some tags -> List.mem "blog" tags
+            | None -> false)
+           && published p <> None)
+    |> List.sort (fun a b -> compare (published b) (published a))
+  in
+  let items =
+    let rec take n l =
+      if n <= 0 then []
+      else match l with [] -> [] | x :: t -> x :: take (n - 1) t
+    in
+    take 25 items
+  in
+  let last_build =
+    match items with
+    | p :: _ -> (
+        match published p with Some d -> rfc822_of_iso d | None -> None)
+    | [] -> None
+  in
+  let buf = Buffer.create 4096 in
+  Buffer.add_string buf
+    {|<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+|};
+  Buffer.add_string buf
+    (Printf.sprintf {|<title>%s</title>
+<link>%s/</link>
+<description>Recent posts on %s</description>
+<language>en</language>
+|}
+       (Util.html_escape site_name) base (Util.html_escape site_name));
+  (match last_build with
+   | Some d -> Buffer.add_string buf ("<lastBuildDate>" ^ d ^ "</lastBuildDate>\n")
+   | None -> ());
+  List.iter
+    (fun (p : Page.page) ->
+      let link = Printf.sprintf "%s/%s" base p.Page.name in
+      Buffer.add_string buf "<item>\n";
+      Buffer.add_string buf
+        ("<title>" ^ Util.html_escape p.Page.title ^ "</title>\n");
+      Buffer.add_string buf ("<link>" ^ link ^ "</link>\n");
+      Buffer.add_string buf
+        ("<guid isPermaLink=\"true\">" ^ link ^ "</guid>\n");
+      (match published p with
+       | Some d -> (
+           match rfc822_of_iso d with
+           | Some rfc -> Buffer.add_string buf ("<pubDate>" ^ rfc ^ "</pubDate>\n")
+           | None -> ())
+       | None -> ());
+      let excerpt = excerpt_of_raw p.Page.raw in
+      if excerpt <> "" then
+        Buffer.add_string buf
+          ("<description>" ^ Util.html_escape excerpt ^ "</description>\n");
+      Buffer.add_string buf "</item>\n")
+    items;
+  Buffer.add_string buf "</channel>\n</rss>\n";
+  Buffer.contents buf

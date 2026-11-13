@@ -120,6 +120,11 @@ let () =
       List.iter (render_page all_visible) hidden_pages)
   |> ignore;
   Printf.printf "wrote %d html files\n%!" (List.length all_visible + List.length hidden_pages);
+
+  (* RSS feed of the blog posts (tag "blog"), same selection as /blog *)
+  Util.write_file
+    (Filename.concat output_dir "rss.xml")
+    (Generator.rss_xml ~site_name visible_pages);
   if Sys.getenv_opt "VOKOBE_PROFILE" = Some "1" then begin
     let prof = Printf.eprintf in
     prof "[prof] ------------------------\n%!";
