@@ -1426,6 +1426,45 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
        (ml +. width +. mr) (mt +. height +. mb) clip_id ml mt width
        height clip_id (Buffer.contents parts) (Buffer.contents frame))
 
+(* rendered maps are a pure function of the (map ...) sexp and the
+   geodata/bins feeding the map, both stable across builds -> the final
+   <figure> html is cached on disk (map-cache/svg-cache/, local only),
+   keyed by md5(sexp, mtime+size of each dependency file).  O(deps +
+   cached size) on a hit instead of the O(f + P) render_svg cost. *)
+let sexp_key =
+  let rec go = function
+    | Atom s -> string_of_int (String.length s) ^ ":" ^ s
+    | List l -> "(" ^ String.concat " " (List.map go l) ^ ")"
+  in
+  go
+
+let svg_stamp path =
+  try
+    let st = Unix.stat path in
+    Printf.sprintf "%s=%d:%.0f" path st.st_size st.st_mtime
+  with _ -> path ^ "=missing"
+
+let render_cached cache_dir args ~deps f =
+  let key =
+    Digest.string
+      (sexp_key (List args) ^ String.concat ";" (List.map svg_stamp deps))
+    |> Digest.to_hex
+  in
+  let dir = Filename.concat cache_dir "svg-cache" in
+  let path = Filename.concat dir (key ^ ".html") in
+  match (try Some (Util.read_file path) with _ -> None) with
+  | Some html -> html
+  | None ->
+      let html = f () in
+      (* failed maps are not cached: a later build with fresh data or
+         network access should retry them *)
+      if not (Util.starts_with ~prefix:"<div class=\"map-error\"" html)
+      then begin
+        Util.ensure_dir dir;
+        (try Util.write_file path html with _ -> ())
+      end;
+      html
+
 let render_error (msg : string) : string =
   Printf.eprintf "[map] %s\n%!" msg;
   Printf.sprintf
@@ -1480,8 +1519,20 @@ let render_ (cache_dir : string) (args : sexp list) : string =
           cls style svg (fmt_coord clat 'N' 'S') (fmt_coord clon 'E' 'W')
           width_km osm_url
   in
-  (* road/water map of a region via locally cached data *)
+  (* road/water map of a region via locally cached data; the region
+     cache file (.json + .bin sidecar) and both world bins are the
+     rendered svg's dependencies *)
   let via_overpass spec r =
+    let region_file = Filename.concat cache_dir (cache_filename r) in
+    let deps =
+      [ region_file; region_file ^ ".bin" ]
+      @ List.map
+          (fun (name, _, _) -> Filename.concat cache_dir name)
+          [ world_rich_file; world_base_file ]
+    in
+    let finish = fun spec r fs ->
+      render_cached cache_dir args ~deps (fun () -> finish spec r fs)
+    in
     match prof_time prof_json_t (fun () -> region_features cache_dir r) with
     | Error e -> (
         (* fallback chain: packed rich regions, then the coarse global
@@ -1495,11 +1546,21 @@ let render_ (cache_dir : string) (args : sexp list) : string =
         | None, None | Some _, None -> render_error e)
     | Ok features -> finish spec r features
   in
+  (* country/world maps depend only on the two geodata files *)
+  let geodata_deps =
+    List.map
+      (Filename.concat cache_dir)
+      [ "country-outlines.json"; "places.json" ]
+  in
+  let finish_geodata spec r fs =
+    render_cached cache_dir args ~deps:geodata_deps (fun () ->
+        finish spec r fs)
+  in
   match parse_spec args with
   | Error e -> render_error e
   | Ok spec when spec.world -> (
       match world_geometries cache_dir with
-      | Some features -> finish spec world_region features
+      | Some features -> finish_geodata spec world_region features
       | None -> render_error "no geodata for world map")
   | Ok spec -> (
       match (spec.country, spec.region) with
@@ -1535,7 +1596,7 @@ let render_ (cache_dir : string) (args : sexp list) : string =
                 | None ->
                     if natural_aspect r >= 3. then pad_to_aspect 3. r else r
               in
-              finish spec r (List.map (fun g -> Outline g) rings)
+              finish_geodata spec r (List.map (fun g -> Outline g) rings)
           | Some (r, _) ->
               (* outline too coarse to draw (city-states): an Overpass
                  map of its bbox instead; keeps the territory's own
