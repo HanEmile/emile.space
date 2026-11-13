@@ -15,30 +15,9 @@ cd "$(dirname "$0")"
 OUT=map-cache/osm
 mkdir -p "$OUT"
 
-EXTRACTS="
-europe/germany
-europe/austria
-europe/spain
-europe/netherlands
-europe/france
-europe/belgium
-europe/great-britain
-europe/poland
-europe/italy
-europe/serbia
-europe/greece
-europe/switzerland
-europe/portugal
-asia/china
-asia/thailand
-asia/vietnam
-asia/cambodia
-asia/taiwan
-asia/malaysia-singapore-brunei
-north-america/us/washington
-north-america/us/new-york
-north-america/us/nevada
-"
+# single source of truth: mapconsts.EXTRACTS (used by
+# extract-map-cache.py's country->extract mapping)
+EXTRACTS="$(python3 extract-map-cache.py --list-extracts)"
 
 FILTER_EXPRS=(
   'w/highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary'

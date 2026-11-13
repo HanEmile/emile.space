@@ -3,23 +3,26 @@
 check-links.py
 
 Scans all HTML files in the output/ directory, extracts every local link
-(href and src attributes), and reports any that don't return HTTP 200.
+(href and src attributes), and reports any with no file in output/.
+The URL space is flat: "/x" is output/x.html when it exists, else the
+literal file output/x (e.g. "/style.css" -> output/style.css).
+
+External links (http(s)://...) are not checked -- they never were; the
+old server-based version of this script skipped them as well.
 
 Usage: python3 check-links.py [--verbose] [base_url]
-Default base_url: http://localhost:8081
+The base_url argument is deprecated and ignored (no server needed).
 """
 
 import sys
 import re
-import urllib.request
-import urllib.error
+import urllib.parse
 from pathlib import Path
-from collections import defaultdict
 
 args = sys.argv[1:]
 VERBOSE = "--verbose" in args
 args = [a for a in args if not a.startswith("--")]
-BASE_URL = args[0] if args else "http://localhost:8081"
+BASE_URL = args[0] if args else None
 OUTPUT = Path(__file__).parent / "output"
 
 def extract_links(html: str) -> set[str]:
@@ -36,16 +39,26 @@ def extract_links(html: str) -> set[str]:
             links.add("/" + url[3:])  # treat ../file as /file in flat structure
     return links
 
-def check(path: str) -> int:
-    try:
-        with urllib.request.urlopen(BASE_URL + path, timeout=5) as r:
-            return r.status
-    except urllib.error.HTTPError as e:
-        return e.code
-    except Exception:
-        return -1
+def exists(path: str) -> bool:
+    """does the URL path resolve inside the flat output/ dir?"""
+    path = path.split("#", 1)[0].split("?", 1)[0]
+    if not path or not path.startswith("/"):
+        return False
+    # "/x" -> "x.html" (page routes) or the literal file "x" (assets);
+    # percent-decoding mirrors what the serving stack resolves
+    rel = urllib.parse.unquote(path.lstrip("/"))
+    if rel == "":
+        rel = "index.html"
+    if not (OUTPUT / rel).resolve().is_relative_to(OUTPUT.resolve()):
+        return False  # never escape output/
+    if (OUTPUT / (rel + ".html")).is_file():
+        return True
+    return (OUTPUT / rel).is_file()
 
 def main() -> int:
+    if BASE_URL is not None:
+        print(f"note: base-URL argument ({BASE_URL}) is deprecated; "
+              f"checking output/ on disk instead")
     all_links: set[str] = set()
     for html_file in OUTPUT.glob("*.html"):
         if html_file.name.startswith("."):
@@ -54,28 +67,18 @@ def main() -> int:
         all_links |= extract_links(text)
 
     print(f"Found {len(all_links)} unique local links across all pages")
-    print(f"Checking against {BASE_URL} ...\n")
+    print(f"Checking against {OUTPUT}/ ...\n")
 
-    failures: dict[int, list[str]] = defaultdict(list)
-    ok = 0
-    for i, link in enumerate(sorted(all_links), 1):
-        status = check(link)
-        if status == 200:
-            ok += 1
-        else:
-            failures[status].append(link)
+    broken = sorted(link for link in all_links if not exists(link))
+    ok = len(all_links) - len(broken)
+    print(f"links: {ok} ok, {len(broken)} broken")
 
-    n_failed = sum(len(v) for v in failures.values())
-    print(f"links: {ok} ok, {n_failed} broken")
+    if broken and VERBOSE:
+        print(f"\n--- broken ({len(broken)}) ---")
+        for link in broken:
+            print(f"  {link}")
 
-    if n_failed and VERBOSE:
-        for code in sorted(failures):
-            label = "connection error" if code == -1 else f"HTTP {code}"
-            print(f"\n--- {label} ({len(failures[code])}) ---")
-            for link in sorted(failures[code]):
-                print(f"  {link}")
-
-    return n_failed
+    return len(broken)
 
 if __name__ == "__main__":
     sys.exit(0 if main() == 0 else 1)

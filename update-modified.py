@@ -7,23 +7,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# script dir is on sys.path; meta.py's finder is string-aware (parens
+# inside quoted strings don't end the block early)
+from meta import meta_block
+
 ROOT = Path(__file__).parent
 INPUT = ROOT / "input"
-
-def meta_block(text):
-    """Return (start, end) of the first (meta ...) block, else None."""
-    m = re.search(r"\(meta\b", text)
-    if not m:
-        return None
-    depth = 0
-    for i in range(m.start(), len(text)):
-        if text[i] == "(":
-            depth += 1
-        elif text[i] == ")":
-            depth -= 1
-            if depth == 0:
-                return (m.start(), i + 1)
-    return None
 
 def main():
     ok, skipped, failed = 0, [], []

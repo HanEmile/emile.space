@@ -10,15 +10,17 @@ Natural Earth 50m outlines are public domain (https://www.naturalearthdata.com).
 City coordinates come from Nominatim (osm.org) - run sparingly, it reuses its
 previous output and only geocodes locations it hasn't seen before.
 """
-import json, os, re, sys, time, urllib.request, urllib.parse, glob
+import glob, hashlib, json, math, os, re, sys, time, urllib.request
+import urllib.parse
+
+import meta as meta_mod
+from mapconsts import CACHE, NE_LOCAL, OUTLINES_OUT, PLACES_OUT, GEODATA_STAMP
+from maptools import rdp
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-CACHE = os.path.join(ROOT, "map-cache")
+STAMP = GEODATA_STAMP
 NE_URL = ("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/"
           "master/geojson/ne_50m_admin_0_countries.geojson")
-NE_LOCAL = os.path.join(CACHE, "ne_50m_admin_0_countries.geojson")
-OUTLINES_OUT = os.path.join(CACHE, "country-outlines.json")
-PLACES_OUT = os.path.join(CACHE, "places.json")
 UA = "vokobe2 geodata updater (https://emile.space)"
 
 ALIASES = {
@@ -36,38 +38,10 @@ def fetch(url, out=None):
             f.write(data)
     return data
 
-def rdp(ring, eps):
-    """Ramer-Douglas-Peucker on a closed ring (start point kept fixed)."""
-    if len(ring) < 4:
-        return ring
-    keep = [False] * len(ring)
-    keep[0] = keep[-1] = True
-    stack = [(0, len(ring) - 1)]
-    while stack:
-        i0, i1 = stack.pop()
-        x1, y1 = ring[i0]
-        x2, y2 = ring[i1]
-        dx, dy = x2 - x1, y2 - y1
-        ln = (dx * dx + dy * dy) ** 0.5
-        maxd, maxi = eps, -1
-        for i in range(i0 + 1, i1):
-            x, y = ring[i]
-            if ln < 1e-12:
-                d = ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5
-            else:
-                d = abs(dx * (y1 - y) - (x1 - x) * dy) / ln
-            if d > maxd:
-                maxd, maxi = d, i
-        if maxi >= 0:
-            keep[maxi] = True
-            stack += [(i0, maxi), (maxi, i1)]
-    return [pt for pt, k in zip(ring, keep) if k]
-
 def ring_area(ring):
     """shoelace area in deg^2, lon scaled by cos(mean lat)"""
     if len(ring) < 3:
         return 0.0
-    import math
     clat = math.cos(math.radians(sum(p[1] for p in ring) / len(ring)))
     a = 0.0
     for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
@@ -93,7 +67,6 @@ SIMPLIFY_EPS = 0.005
 
 def ring_dist_km(a, b):
     """approx min distance between two (already simplified) rings"""
-    import math
     best = float("inf")
     for x1, y1 in a:
         clat = math.cos(math.radians(y1))
@@ -145,18 +118,42 @@ def rings_of_geometry(geom):
     return [r for r in world if keep(r)], world
 
 # stamp-caching: outlines + places only depend on the Natural Earth
-# source, this script and the input pages -- a full recompute costs ~13 s
-# of RDP/ring-distance work that publishes should not pay every time
-STAMP = os.path.join(CACHE, ".geodata.stamp")
+# source, this script and the (meta ...) blocks of the input pages (only
+# meta attrs can hold (location ...)); hashing those instead of mtimes
+# saves the ~13 s recompute on pure prose edits
+INPUT_MD = sorted(glob.glob(os.path.join(ROOT, "input", "*.md")))
 
 def stamp_current():
-    deps = [NE_LOCAL, os.path.abspath(__file__)]
-    deps += glob.glob(os.path.join(ROOT, "input", "*.md"))
-    return max(os.path.getmtime(d) for d in deps if os.path.exists(d))
+    """(source mtimes, fingerprint hash of all meta blocks)"""
+    mtimes = max(os.path.getmtime(d) for d in
+                 [NE_LOCAL, os.path.abspath(__file__)] if os.path.exists(d))
+    return mtimes, input_fingerprint()
 
-stamp_mtime = os.path.getmtime(STAMP) if os.path.exists(STAMP) else 0
+def stamp_saved():
+    try:
+        with open(STAMP) as f:
+            mtime_s, fp = f.read().split()
+        return float(mtime_s), fp
+    except (OSError, ValueError):
+        return 0, ""
+
+def write_stamp():
+    with open(STAMP, "w") as f:
+        f.write(f"{stamp_current()[0]} {input_fingerprint()}\n")
+
+def input_fingerprint():
+    h = hashlib.sha256()
+    for path in INPUT_MD:
+        text = open(path, encoding="utf8", errors="replace").read()
+        block = meta_mod.meta_block(text)
+        if block:
+            h.update(text[block[0]:block[1]].encode())
+    return h.hexdigest()
+
+saved_mtime, saved_fp = stamp_saved()
+cur_mtime = stamp_current()[0]
 if (os.path.exists(OUTLINES_OUT) and os.path.exists(PLACES_OUT)
-        and stamp_mtime >= stamp_current()):
+        and saved_mtime >= cur_mtime and saved_fp == input_fingerprint()):
     print("map geodata unchanged (map-cache/.geodata.stamp)")
     sys.exit(0)
 
@@ -193,13 +190,43 @@ print(f"{OUTLINES_OUT}: {len(outlines)} names, "
 
 # ---------------- places ------------------------------------------------------------
 
-loc_re = re.compile(r'\(location\s+((?:"[^"]*"\s*)+)\)')
-q_re = re.compile(r'"([^"]*)"')
+LOC_START_RE = re.compile(r"\(location\b")
+LOC_QSTRING_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
+LOC_UNQUOTE_RE = re.compile(r'\\(.)')
+
+def strip_code_fences(text):
+    """blank out fenced code blocks (the OCaml page parser skips them,
+    so (location ...) attrs inside must not be geocoded)"""
+    out = list(text)
+    start = None
+    off = 0
+    for line in text.splitlines(keepends=True):
+        if line.lstrip().startswith("```"):
+            if start is None:
+                start = off
+            else:
+                for j in range(start, off + len(line)):
+                    out[j] = " "
+                start = None
+        off += len(line)
+    return "".join(out)
 
 locations = set()
-for path in glob.glob(os.path.join(ROOT, "input", "*.md")):
-    for m in loc_re.finditer(open(path).read()):
-        vals = q_re.findall(m.group(1))
+for path in INPUT_MD:
+    text = strip_code_fences(open(path, encoding="utf8",
+                               errors="replace").read())
+    pos = 0
+    while True:
+        m = LOC_START_RE.search(text, pos)
+        if not m:
+            break
+        g = meta_mod.find_group(text[m.start():], LOC_START_RE)
+        if not g:
+            break
+        group = text[m.start():m.start() + g[1]]
+        pos = m.start() + g[1]
+        vals = [LOC_UNQUOTE_RE.sub(r"\1", s[1:-1])
+                for s in LOC_QSTRING_RE.findall(group)]
         if len(vals) == 2:
             locations.add((vals[0], vals[1]))
         else:
@@ -232,7 +259,6 @@ def geocode(city, country):
     out = {"lat": round(float(r["lat"]), 5), "lon": round(float(r["lon"]), 5)}
     if "boundingbox" in r:
         s, n, w, e = map(float, r["boundingbox"])
-        import math
         # clamp: Nominatim bboxes of island city-states (Hong Kong,
         # Singapore) span far more sea than land; cap keeps the map urban
         out["width_km"] = max(1, min(40, round((e - w) * 111.320 * math.cos(math.radians(out["lat"])))))
@@ -266,4 +292,4 @@ json.dump(places, open(PLACES_OUT, "w"), indent=1, sort_keys=True, ensure_ascii=
 print(f"{PLACES_OUT}: {len(places['cities'])} cities, "
       f"{len(places['countries'])} country fallbacks, "
       f"{len(places['unresolved'])} unresolved, {n_geo} new lookups")
-open(STAMP, "w").write("ok\n")
+write_stamp()

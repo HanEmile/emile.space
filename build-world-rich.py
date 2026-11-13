@@ -6,7 +6,7 @@ renders every visited region at full detail while the coarse
 world-base.bin covers the rest of the planet.
 
 Same record format as build-world-base.py (see its docstring), with
-magic "VOKWR001" and coordinates quantized to 1e-6 degrees (~0.1 m).
+magic "VOKWR001" and coordinates quantized to Q = 1e-4 degrees (~11 m).
 Classes: 1=coastline, 2=water line, 3=water fill (closed ring),
 4=major road (motorway/trunk), 5=primary road, 6=secondary road.
 
@@ -15,58 +15,16 @@ Only what the maps actually show: geometries are RDP-simplified to
 below ~60 m across (sub-pixel) and way segments far outside their
 region are dropped.
 """
-import glob, json, os, re, sys
+import json, os, re, sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-CACHE = os.path.join(ROOT, "map-cache")
+from mapconsts import CACHE, REGION_RE
+from maptools import (CL_WATER_FILL, Q, Writer, osm_way_class, rdp)
+
 OUT = os.path.join(CACHE, "world-rich.bin")
 
-CL_COAST, CL_WATER_LINE, CL_WATER_FILL = 1, 2, 3
-CL_MAJOR, CL_PRIMARY, CL_SECONDARY = 4, 5, 6
-
-Q = 1e-4          # 11 m quantization; maps render at ~42 m/px
 SIMPLIFY = 0.00025  # ~25 m RDP epsilon (well below a display pixel)
 FILL_MIN_DEG = 0.0006  # drop water fills < ~60 m bbox (sub-pixel dots)
 CLIP_PAD = 0.02   # keep way points within region bbox + this pad (~2 km)
-REGION_RE = re.compile(r"-?\d+\.\d+_-?\d+\.\d+_-?\d+\.\d+_-?\d+\.\d+\.json$")
-ROADS_MAJOR = {"motorway", "motorway_link", "trunk", "trunk_link"}
-ROADS_PRIMARY = {"primary", "primary_link"}
-ROADS_SECONDARY = {"secondary"}
-WATERWAYS = {"river", "canal", "stream"}
-
-def way_class(tags):
-    if tags.get("highway") in ROADS_MAJOR: return CL_MAJOR
-    if tags.get("highway") in ROADS_PRIMARY: return CL_PRIMARY
-    if tags.get("highway") in ROADS_SECONDARY: return CL_SECONDARY
-    if tags.get("waterway") in WATERWAYS: return CL_WATER_LINE
-    if tags.get("natural") == "coastline": return CL_COAST
-    if tags.get("natural") == "water" or tags.get("landuse") == "reservoir":
-        return CL_WATER_FILL
-    return None
-
-def rdp(ring, eps):
-    if len(ring) < 4:
-        return ring
-    keep = [False] * len(ring)
-    keep[0] = keep[-1] = True
-    stack = [(0, len(ring) - 1)]
-    while stack:
-        i0, i1 = stack.pop()
-        x1, y1 = ring[i0]
-        x2, y2 = ring[i1]
-        dx, dy = x2 - x1, y2 - y1
-        ln = (dx * dx + dy * dy) ** 0.5
-        maxd, maxi = eps, -1
-        for i in range(i0 + 1, i1):
-            x, y = ring[i]
-            d = ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5 if ln < 1e-12 \
-                else abs(dx * (y1 - y) - (x1 - x) * dy) / ln
-            if d > maxd:
-                maxd, maxi = d, i
-        if maxi >= 0:
-            keep[maxi] = True
-            stack += [(i0, maxi), (maxi, i1)]
-    return [pt for pt, k in zip(ring, keep) if k]
 
 def clip_runs(geom, s, w, n, e):
     """runs of consecutive points inside the padded region bbox (open
@@ -99,32 +57,6 @@ def quantize(geom, closed):
         pts.append(pts[0])
     return pts
 
-class Writer:
-    def __init__(self):
-        self.buf = bytearray()
-    def u8(self, v):
-        self.buf.append(v & 0xFF)
-    def varint(self, v):
-        while True:
-            b = v & 0x7F
-            v >>= 7
-            if v:
-                self.buf.append(b | 0x80)
-            else:
-                self.buf.append(b)
-                return
-    def zz(self, n):
-        self.varint((n << 1) ^ (n >> 63))
-    def feature(self, cls, pts):
-        self.u8(cls)
-        self.varint(len(pts))
-        (x0, y0) = pts[0]
-        self.zz(x0)
-        self.zz(y0)
-        for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
-            self.zz(x2 - x1)
-            self.zz(y2 - y1)
-
 def main():
     w = Writer()
     w.buf += b"VOKWR001"
@@ -140,7 +72,7 @@ def main():
         d = json.load(open(os.path.join(CACHE, fn)))
         for el in d.get("elements", []):
             if el.get("type") == "way" and el.get("geometry"):
-                cls = way_class(el.get("tags", {}))
+                cls = osm_way_class(el.get("tags", {}))
                 if cls is None:
                     continue
                 geom = [(p["lon"], p["lat"]) for p in el["geometry"]]

@@ -12,42 +12,17 @@ file on success.
 Regions whose country extract is missing are kept as .query files.
 Run inside nix:  nix-shell shell.nix --run 'python3 extract-map-cache.py'
 """
-import json, os, re, subprocess, sys, tempfile
+import json, os, subprocess, sys, tempfile
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-CACHE = os.path.join(ROOT, "map-cache")
+from mapconsts import CACHE, EXTRACTS, NE_LOCAL, QUERY_RE
+
 OSM_DIR = os.path.join(CACHE, "osm")
-NE_LOCAL = os.path.join(CACHE, "ne_50m_admin_0_countries.geojson")
 
-REGION_RE = re.compile(
-    r"(-?\d+\.\d+)_(-?\d+\.\d+)_(-?\d+\.\d+)_(-?\d+\.\d+)\.json\.query$")
-
-# base name (without .filtered.osm.pbf) -> Geofabrik path segment; every
-# country polygon name below maps to one of these
-EXTRACTS = {
-    "germany": "europe/germany",
-    "austria": "europe/austria",
-    "spain": "europe/spain",
-    "netherlands": "europe/netherlands",
-    "france": "europe/france",
-    "belgium": "europe/belgium",
-    "great-britain": "europe/great-britain",
-    "poland": "europe/poland",
-    "italy": "europe/italy",
-    "serbia": "europe/serbia",
-    "greece": "europe/greece",
-    "switzerland": "europe/switzerland",
-    "portugal": "europe/portugal",
-    "china": "asia/china",
-    "nevada": "north-america/us/nevada",
-    "thailand": "asia/thailand",
-    "vietnam": "asia/vietnam",
-    "cambodia": "asia/cambodia",
-    "taiwan": "asia/taiwan",
-    "malaysia-singapore-brunei": "asia/malaysia-singapore-brunei",
-    "washington": "north-america/us/washington",
-    "new-york": "north-america/us/new-york",
-}
+if "--list-extracts" in sys.argv:
+    # Geofabrik paths for fetch-osm-dataset.sh (one per line)
+    for path in EXTRACTS.values():
+        print(path)
+    sys.exit(0)
 
 # Natural Earth country name -> extract base name
 COUNTRY_TO_EXTRACT = {
@@ -179,7 +154,7 @@ def convert(pbf_path, out_path):
                   separators=(",", ":"))
 
 def main():
-    queries = sorted(f for f in os.listdir(CACHE) if REGION_RE.match(f))
+    queries = sorted(f for f in os.listdir(CACHE) if QUERY_RE.match(f))
     if not queries:
         print("no map-cache/*.query files (run a build with"
               " --dump-missing-queries first)")
@@ -188,7 +163,7 @@ def main():
     missing_extracts = set()
     done = failed = 0
     for q in queries:
-        s, w, n, e = map(float, REGION_RE.match(q).groups()[:4])
+        s, w, n, e = map(float, QUERY_RE.match(q).groups()[:4])
         extract = extract_for(ne, (s + n) / 2, (w + e) / 2)
         if not extract:
             print(f"  SKIP {q}: no country found for center")

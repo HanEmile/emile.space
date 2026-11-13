@@ -28,43 +28,17 @@ Format (little conceptual doc; kept in sync with the OCaml decoder):
   Coordinates are quantized to Q = 1e-4 degrees (~11 m), stored as
   integers.  varint = unsigned LEB128; zigzag = (n<<1)^(n>>63) style.
 """
-import json, math, os, struct, sys
+import json, os, sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-NE_DIR = os.path.join(ROOT, "map-cache", "ne10m")
-OUT = os.path.join(ROOT, "map-cache", "world-base.bin")
+from mapconsts import CACHE
+from maptools import (CL_COAST, CL_WATER_LINE, CL_WATER_FILL, NE_ROAD_CLASS,
+                      Q, Writer, rdp)
 
-CL_COAST, CL_WATER_LINE, CL_WATER_FILL = 1, 2, 3
-CL_TRUNK, CL_PRIMARY, CL_SECONDARY = 4, 5, 6
+NE_DIR = os.path.join(CACHE, "ne10m")
+OUT = os.path.join(CACHE, "world-base.bin")
 
-Q = 1e-4          # degrees per unit (~11 m)
 SIMPLIFY = 0.0005 # RDP epsilon in degrees (~50 m)
 MIN_POINTS = 3
-
-def rdp(ring, eps):
-    """Ramer-Douglas-Peucker on a line (endpoints kept)."""
-    if len(ring) < MIN_POINTS:
-        return ring
-    keep = [False] * len(ring)
-    keep[0] = keep[-1] = True
-    stack = [(0, len(ring) - 1)]
-    while stack:
-        i0, i1 = stack.pop()
-        x1, y1 = ring[i0][:2]
-        x2, y2 = ring[i1][:2]
-        dx, dy = x2 - x1, y2 - y1
-        ln = math.hypot(dx, dy)
-        maxd, maxi = eps, -1
-        for i in range(i0 + 1, i1):
-            x, y = ring[i][:2]
-            d = (math.hypot(x - x1, y - y1) if ln < 1e-12
-                 else abs(dx * (y1 - y) - (x1 - x) * dy) / ln)
-            if d > maxd:
-                maxd, maxi = d, i
-        if maxi >= 0:
-            keep[maxi] = True
-            stack += [(i0, maxi), (maxi, i1)]
-    return [pt for pt, k in zip(ring, keep) if k]
 
 def geoms_of(f):
     g = f["geometry"]
@@ -79,32 +53,6 @@ def geoms_of(f):
     if g["type"] == "MultiPolygon":
         return [ring for poly in g["coordinates"] for ring in poly]
     return []
-
-class Writer:
-    def __init__(self):
-        self.buf = bytearray()
-    def u8(self, v):
-        self.buf.append(v & 0xFF)
-    def varint(self, v):  # unsigned LEB128
-        while True:
-            b = v & 0x7F
-            v >>= 7
-            if v:
-                self.buf.append(b | 0x80)
-            else:
-                self.buf.append(b)
-                return
-    def zz(self, n):  # zigzag-encoded signed -> unsigned varint
-        self.varint((n << 1) ^ (n >> 63))
-    def feature(self, cls, pts_q):
-        self.u8(cls)
-        self.varint(len(pts_q))
-        x0, y0 = pts_q[0]
-        self.zz(x0)
-        self.zz(y0)
-        for (x1, y1), (x2, y2) in zip(pts_q, pts_q[1:]):
-            self.zz(x2 - x1)
-            self.zz(y2 - y1)
 
 def quantize(geom):
     pts_q, prev = [], None
@@ -126,7 +74,7 @@ def collect(path, cls_of, closed=False):
             continue
         for geom in geoms_of(f):
             n_pts_in += len(geom)
-            geom = rdp(geom, SIMPLIFY)
+            geom = rdp(geom, SIMPLIFY, MIN_POINTS)
             if closed and geom[0][:2] != geom[-1][:2]:
                 geom = geom + [geom[0]]
             q = quantize(geom)
@@ -136,12 +84,6 @@ def collect(path, cls_of, closed=False):
     print(f"  {os.path.basename(path)}: {n_in} features, "
           f"{n_pts_in} -> {sum(len(p) for _, p in out)} points")
     return out
-
-ROAD_CLASS = {
-    "Major Highway": CL_TRUNK, "Beltway": CL_TRUNK, "Bypass": CL_TRUNK,
-    "Secondary Highway": CL_PRIMARY,
-    "Road": CL_SECONDARY, "Unknown": CL_SECONDARY, "Track": CL_SECONDARY,
-}
 
 def main():
     for f in ("ne_10m_coastline", "ne_10m_rivers_lake_centerlines",
@@ -157,7 +99,7 @@ def main():
     features += collect(os.path.join(NE_DIR, "ne_10m_lakes.geojson"),
                         lambda f: CL_WATER_FILL, closed=True)
     features += collect(os.path.join(NE_DIR, "ne_10m_roads.geojson"),
-                        lambda f: ROAD_CLASS.get(
+                        lambda f: NE_ROAD_CLASS.get(
                             f["properties"].get("type")))
     w = Writer()
     w.buf += b"VOKWB001"
