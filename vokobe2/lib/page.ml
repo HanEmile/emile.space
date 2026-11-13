@@ -53,6 +53,19 @@ let page_title_of (name : string) (raw : string) : string =
 
 (* O(a^2) worst case; a = attrs - per attr an assoc mem-check plus a
    rebuild/append of the accumulator.  Tiny in practice (few keys/page). *)
+(* drop the first top-level heading line (the page's title line): books
+   inject their own chapter title in its place.  O(L). *)
+let drop_first_h1 (raw : string) : string =
+  let lines = String.split_on_char '\n' raw in
+  let rec drop acc = function
+    | [] -> List.rev acc
+    | line :: rest -> (
+        match Heading.parse_heading line with
+        | Some (1, _) -> List.rev_append acc rest
+        | _ -> drop (line :: acc) rest)
+  in
+  String.concat "\n" (drop [] lines)
+
 let merge_attrs (attrs_rev : (string * string list) list) : (string * string list) list =
   List.fold_left
     (fun acc (k, vs) ->

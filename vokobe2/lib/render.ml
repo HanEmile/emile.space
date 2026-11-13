@@ -788,16 +788,27 @@ let render_book (ctx : context) (tag : string) : string =
   else
     let buf = Buffer.create 4096 in
     Buffer.add_string buf "<div class=\"book\">\n<ul class=\"book-toc\">\n";
+    (* chapter label: title + (YYYY-MM) when dated -- otherwise same-city
+       repeat visits (Bangkok Sep + Bangkok Nov) look like duplicates *)
+    let label_of (p : Page.page) =
+      match List.assoc_opt "date-start" p.Page.attrs with
+      | Some (d :: _) when String.length d >= 7 ->
+          Printf.sprintf "%s (%s)" p.Page.title (String.sub d 0 7)
+      | _ -> p.Page.title
+    in
     List.iteri
       (fun i (p : Page.page) ->
         Buffer.add_string buf
           (Printf.sprintf "<li>%d. <a href=\"#chapter-%s\">%s</a></li>\n"
-             (i + 1) p.Page.name (Util.html_escape p.Page.title)))
+             (i + 1) p.Page.name (Util.html_escape (label_of p))))
       chapters;
     Buffer.add_string buf "</ul>\n";
     List.iteri
       (fun i (p : Page.page) ->
-        let headings = Heading.collect_headings p.Page.raw in
+        (* drop the chapter's own top-level h1 (its title): the injected
+           chapter-title takes that role -- one h1 per chapter *)
+        let raw = Page.drop_first_h1 p.Page.raw in
+        let headings = Heading.collect_headings raw in
         let cctx =
           {
             ctx with
@@ -808,14 +819,14 @@ let render_book (ctx : context) (tag : string) : string =
             backlinks_op_used = false;
           }
         in
-        let body = !render_body_late cctx p.Page.raw in
+        let body = !render_body_late cctx raw in
         Buffer.add_string buf
           (Printf.sprintf
              {|<section class="chapter" id="chapter-%s">
 <h1 class="chapter-title">%d. <a href="/%s">%s</a></h1>
 %s</section>
 |}
-             p.Page.name (i + 1) p.Page.name (Util.html_escape p.Page.title)
+             p.Page.name (i + 1) p.Page.name (Util.html_escape (label_of p))
              body))
       chapters;
     Buffer.add_string buf "</div>\n";

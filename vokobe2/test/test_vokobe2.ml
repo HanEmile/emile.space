@@ -167,7 +167,10 @@ Second paragraph.
   assert (contains html {|<a href="/ch-old">Old</a>|});
   assert (contains html "old text." && contains html "new text.");
   assert (not (contains html "chapter-my-book"));
-  assert (contains html {|<h1 id="old"|} && contains html {|<h1 id="new"|});
+  (* chapters' own top-level h1s are stripped (chapter-title replaces
+     them); their body text survives *)
+  assert (not (contains html {|<h1 id="old"|})
+          && not (contains html {|<h1 id="new"|}));
 
   (* /now: current events beat past, future shows as upcoming *)
   let ongoing =
