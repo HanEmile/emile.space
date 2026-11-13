@@ -805,9 +805,16 @@ let snippet_of (tok : string) (raw : string) : string =
   match find_line 0 with
   | None -> ""
   | Some (pos, stop) ->
-      let s = String.sub raw pos (min 120 (stop - pos)) in
-      String.map (fun c -> if c = '(' then '[' else if c = ')' then ']' else c) s
-      |> String.trim
+      let s =
+        String.sub raw pos (min 120 (stop - pos))
+        |> String.map (fun c ->
+               if c = '(' then '[' else if c = ')' then ']' else c)
+        |> strip_markdown |> String.trim
+      in
+      (* drop leftover list markers *)
+      if String.starts_with ~prefix:"- " s then
+        String.sub s 2 (String.length s - 2)
+      else s
 
 (* per token: one "search-TOKEN" page listing the pages it appears on,
    name-match first, then by occurrence count *)
@@ -861,16 +868,21 @@ let generate_search_pages (pages : Page.page list) : Page.page list =
         let shown = List.filteri (fun i _ -> i < search_word_max_pages) ranked in
         let buf = Buffer.create 1024 in
         Buffer.add_string buf
-          (Printf.sprintf "# search: %s\n\nfound on %d page(s):\n\n" tok
-             (List.length ranked));
+          (Printf.sprintf "# search: %s\n\nfound on %d page(s):\n\n"
+             tok (List.length ranked));
+        (* results via the (table ...) op (raw html in the markdown body
+           is escaped); the :~:text= fragment makes browsers highlight
+           every occurrence of the term on the target page *)
+        Buffer.add_string buf "(table\n  (header \"page\" \"hits\" \"context\")\n";
         List.iter
           (fun (p, cnt) ->
             let snip = snippet_of tok p.Page.raw in
             Buffer.add_string buf
-              (Printf.sprintf "- [%s](/%s) (%dx)%s\n"
-                 (Sexp.escaped_str p.Page.title) p.Page.name cnt
-                 (if snip = "" then "" else " — " ^ snip)))
+              (Printf.sprintf "  (row (link \"/%s#:~:text=%s\" \"%s\") \"%d\" \"%s\")\n"
+                 p.Page.name tok (Sexp.escaped_str p.Page.title) cnt
+                 (Sexp.escaped_str snip)))
           shown;
+        Buffer.add_string buf ")\n";
         ({
            Page.name = "search-" ^ tok;
            title = "search: " ^ tok;

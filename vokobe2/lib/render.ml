@@ -883,8 +883,22 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
 
   | "link", Atom target :: rest ->
       let label = match rest with Atom l :: _ -> l | _ -> target in
-      Printf.sprintf "<a href=\"/%s.html\">%s</a>"
-        (Util.html_escape target) (Util.html_escape label)
+      (* clean-URL page link; "name#frag" keeps the fragment
+         (used for #:~:text= highlights from search pages) *)
+      let target =
+        if String.starts_with ~prefix:"/" target then
+          String.sub target 1 (String.length target - 1)
+        else target
+      in
+      let name, frag =
+        match String.index_opt target '#' with
+        | Some i ->
+            (String.sub target 0 i,
+             String.sub target i (String.length target - i))
+        | None -> (target, "")
+      in
+      Printf.sprintf "<a href=\"/%s%s\">%s</a>" (Util.html_escape name)
+        frag (Util.html_escape label)
 
   | "table", rows ->
       let ncols =

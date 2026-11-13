@@ -194,4 +194,29 @@ Second paragraph.
        assert (contains p.raw "## November 13" && contains p.raw "[Trip](/trip)")
    | None -> assert false);
 
+  (* search pages: table of results, links carry :~:text= fragments *)
+  let p1 = mk_page "nixctf" "# Nix CTF\n\nnixos nixos nixos nixos nixos\n" in
+  let p2 = mk_page "nixops" "# nixops\n\nnixos nixos nixos nixos\n" in
+  let search_pages = Vokobe2.Generator.generate_search_pages [p1; p2] in
+  assert (List.length search_pages = 1);
+  let sp = List.hd search_pages in
+  assert (sp.Vokobe2.Page.name = "search-nixos");
+  (* the page raw holds a (table ...) op; render it to check the table *)
+  let pages = [sp; p1; p2] in
+  let rendered = Vokobe2.Render.render_body (ctx pages sp) sp.raw in
+  assert (contains rendered "<table>");
+  assert (contains rendered {|<a href="/nixctf#:~:text=nixos"|});
+  assert (contains rendered {|<a href="/nixops#:~:text=nixos"|});
+  (* nixctf (5 hits) ranks before nixops (4 hits) *)
+  let io hay needle =
+    let n, m = (String.length hay, String.length needle) in
+    let rec go i =
+      if i + m > n then -1
+      else if String.sub hay i m = needle then i
+      else go (i + 1)
+    in
+    go 0
+  in
+  assert (io rendered "/nixctf#:~:text=nixos" < io rendered "/nixops#:~:text=nixos");
+
   print_endline "ok"
