@@ -902,8 +902,8 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
              String.sub target i (String.length target - i))
         | None -> (target, "")
       in
-      Printf.sprintf "<a href=\"/%s%s\">%s</a>" (Util.html_escape name)
-        frag (Util.html_escape label)
+      Printf.sprintf "<a href=\"/%s\">%s</a>"
+        (Util.html_escape (name ^ frag)) (Util.html_escape label)
 
   | "table", rows ->
       let ncols =
