@@ -109,6 +109,11 @@ let () =
 
   (* name -> page, built once and shared by every render *)
   let page_index = Render.page_index_of all_visible in
+  (* Per page: two render_body passes (the first in collect-only mode to
+     harvest dynamically generated query headings), so body rendering
+     costs 2x, plus O(len html) for the template and disk write.  The
+     queries/backlinks/navbar inside each render scan all pages, making
+     the whole render phase superlinear in the page count. *)
   let render_page pages page =
     let headings = Heading.collect_headings page.Page.raw in
     let make_ctx headings collect_only =
@@ -167,6 +172,8 @@ let () =
     Printf.printf "[map] fetched %d new region(s) of external map data\n%!"
       !Roughmap.fetched;
 
+  (* O(total bytes of non-.md files): recursive directory walk copying
+     every asset verbatim. *)
   let rec copy_non_md src_dir dst_dir =
     Sys.readdir src_dir
     |> Array.iter (fun f ->

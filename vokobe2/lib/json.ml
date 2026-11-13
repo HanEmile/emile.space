@@ -11,6 +11,7 @@ type t =
 
 exception Error of string
 
+(* O(L); L = input length (single recursive-descent pass). *)
 let parse (s : string) : t =
   let len = String.length s in
   let pos = ref 0 in
@@ -147,7 +148,8 @@ let parse (s : string) : t =
   skip_ws ();
   v
 
-(* Strip insignificant whitespace (respecting string literals + escapes). *)
+(* Strip insignificant whitespace (respecting string literals + escapes).
+   Complexity: O(L); L = input length. *)
 let minify (s : string) : string =
   let buf = Buffer.create (String.length s) in
   let in_str = ref false in
@@ -171,6 +173,7 @@ let minify (s : string) : string =
   Buffer.contents buf
 
 (* accessors *)
+(* O(k); k = keys of the object (objects are assoc lists). *)
 let member key = function Obj kvs -> List.assoc_opt key kvs | _ -> None
 let as_float = function Num n -> Some n | _ -> None
 let as_string = function Str s -> Some s | _ -> None

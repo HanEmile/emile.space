@@ -2,6 +2,7 @@ type sexp = Atom of string | List of sexp list
 
 exception Parse_error of string
 
+(* O(size of the parsed sexp): a single forward pass from [start]. *)
 let parse_sexp_at (s : string) (start : int) : sexp * int =
   let len = String.length s in
   let pos = ref start in

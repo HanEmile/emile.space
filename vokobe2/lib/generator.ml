@@ -10,6 +10,7 @@ let next_day (y, m, d) =
   else let m' = m + 1 in
     if m' <= 12 then (y, m', 1) else (y + 1, 1, 1)
 
+(* O(d); d = days in the range (hard-capped at 1000). *)
 let enumerate_date_range (start_str : string) (end_str : string) : string list =
   let parse s = match String.split_on_char '-' (String.trim s) with
     | [y; m; d] -> (try Some (int_of_string y, int_of_string m, int_of_string d) with _ -> None)
@@ -35,6 +36,8 @@ let enumerate_date_range (start_str : string) (end_str : string) : string list =
       List.rev !acc
   | _ -> []
 
+(* O(n * d): enumerate up to d = 1000 days per ranged page; n = pages.
+   The attrs append is another O(a) per page, a = attrs/page. *)
 let add_date_range_str (pages : Page.page list) : Page.page list =
   List.map (fun (p : Page.page) ->
     match List.assoc_opt "date-start" p.attrs, List.assoc_opt "date-end" p.attrs with
@@ -49,12 +52,15 @@ let add_date_range_str (pages : Page.page list) : Page.page list =
 let tags_of_page (p : Page.page) : string list =
   Option.value ~default:[] (List.assoc_opt "tag" p.Page.attrs)
 
+(* O(T log T); T = total tag occurrences across all pages. *)
 let collect_all_tags (pages : Page.page list) : string list =
   pages |> List.concat_map tags_of_page |> List.sort_uniq String.compare
 
 (* one generated pseudo-page per key (index pages for tags, dates, ...);
    a real page with the key's name always wins, only attrs/raw differ per
-   generator *)
+   generator
+   Complexity: O(k * n); k = keys, n = base pages - the "real page wins"
+   check is a linear List.exists over base_pages for every key. *)
 let gen_index_pages base_pages keys attrs_of raw_of : Page.page list =
   List.filter_map
     (fun key ->
@@ -70,6 +76,7 @@ let gen_index_pages base_pages keys attrs_of raw_of : Page.page list =
           } : Page.page))
     keys
 
+(* O(n); n = pages (List.exists scan). *)
 let make_umbrella_page (attr : string) (pages : Page.page list) : Page.page option =
   if List.exists (fun (p : Page.page) -> p.name = attr) pages then None
   else
@@ -88,6 +95,7 @@ let make_umbrella_page (attr : string) (pages : Page.page list) : Page.page opti
           attr attr;
     } : Page.page)
 
+(* O(t * n): gen_index_pages over t = distinct tags against n pages. *)
 let generate_tag_pages (pages : Page.page list) : Page.page list =
   let individual =
     gen_index_pages pages (collect_all_tags pages)
@@ -119,6 +127,12 @@ let center_map_block lat lon label =
 let country_map_block country inner =
   Printf.sprintf "(map (country \"%s\")%s)\n\n" (Sexp.escaped_str country) inner
 
+(* O(n * l_p + l * (n + g) + c * l): locations are collected in one pass
+   over n pages with l_p locations/page; each of the l distinct locations
+   runs safe_page with a linear name check over n + g pages (g generated
+   so far), and each of the c countries scans all l locations for map
+   markers.  Roughmap geodata lookups are memoized O(1)-ish after the
+   first call. *)
 let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
     : Page.page list =
   let locations =
@@ -319,6 +333,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
   let city_umbrella = make_umbrella_page "city" (pages @ all_generated) in
   all_generated @ Option.to_list umbrella @ Option.to_list city_umbrella
 
+(* O(len s). *)
 let clean_str (s : string) : string =
   let s = String.trim s in
   let len = String.length s in
@@ -327,6 +342,8 @@ let clean_str (s : string) : string =
   else
     s
 
+(* O(a + d); a = attrs of the page, d = days in its date range (cap
+   1000, see enumerate_date_range). *)
 let extract_dates_from_page (p : Page.page) : string list =
   let clean_first key =
     match List.assoc_opt key p.attrs with
@@ -344,6 +361,8 @@ let extract_dates_from_page (p : Page.page) : string list =
        | Some d -> [d]
        | None -> [])
 
+(* O(D log D); D = total dates across all pages, each date expanding to
+   up to 3 keys (year, year-month, year-month-day). *)
 let collect_date_keys (pages : Page.page list) : string list =
   let raw_dates = List.concat_map extract_dates_from_page pages in
   let keys =
@@ -358,6 +377,8 @@ let collect_date_keys (pages : Page.page list) : string list =
   in
   List.sort_uniq String.compare keys
 
+(* O(D log D + k * n): collect D dates, then gen_index_pages over
+   k = distinct date keys against n pages. *)
 let generate_date_pages (pages : Page.page list) : Page.page list =
   let individual =
     gen_index_pages pages (collect_date_keys pages)
@@ -393,6 +414,8 @@ let rss_month_names =
   [| "Jan"; "Feb"; "Mar"; "Apr"; "May"; "Jun";
      "Jul"; "Aug"; "Sep"; "Oct"; "Nov"; "Dec" |]
 
+(* O(y - 1970 + m) constant-work iterations; effectively constant for
+   any realistic date. *)
 let days_since_epoch y m d =
   let days = ref 0 in
   for yy = 1970 to y - 1 do
@@ -403,7 +426,8 @@ let days_since_epoch y m d =
   done;
   !days + d - 1
 
-(* "2026-11-13" -> "Fri, 13 Nov 2026 00:00:00 +0000" *)
+(* "2026-11-13" -> "Fri, 13 Nov 2026 00:00:00 +0000"
+   Complexity: O(len iso) + days_since_epoch. *)
 let rfc822_of_iso (iso : string) : string option =
   match String.split_on_char '-' (String.trim iso) with
   | [y; m; d] -> (
@@ -418,7 +442,9 @@ let rfc822_of_iso (iso : string) : string option =
       with _ -> None)
   | _ -> None
 
-(* [text](url) / ![alt](url) -> text, other markdown chars dropped *)
+(* [text](url) / ![alt](url) -> text, other markdown chars dropped
+   Complexity: O(L) expected, L = input length; '['-dense input rescans
+   via String.index_from_opt, O(L^2) worst case. *)
 let strip_markdown (s : string) : string =
   let n = String.length s in
   let b = Buffer.create n in
@@ -448,7 +474,9 @@ let strip_markdown (s : string) : string =
   Buffer.contents b
 
 (* first prose paragraph of a page (meta/queries skipped, markup stripped),
-   capped at 280 chars, for <description> *)
+   capped at 280 chars, for <description>
+   Complexity: O(L); L = raw page length (two sexp-skip passes plus a
+   paragraph split). *)
 let excerpt_of_raw (raw : string) : string =
   let n = String.length raw in
   (* skip leading whitespace and balanced (sexp ...) blocks *)
@@ -515,6 +543,9 @@ let excerpt_of_raw (raw : string) : string =
   if String.length s <= 280 then s
   else String.sub s 0 280 ^ "…"
 
+(* O(n * t + b log b + E): filter n pages by tag (t = tags/page), sort
+   b = blog posts, then excerpts cost E = total raw length of the
+   (at most 25) emitted items. *)
 let rss_xml ~(site_name : string) (pages : Page.page list) : string =
   let base = "https://" ^ site_name in
   let published (p : Page.page) =

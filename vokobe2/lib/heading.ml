@@ -9,7 +9,8 @@ type heading = {
    headings for the TOC and when rendering them in the body. [counters]
    holds one counter per level, 1-based: updating at [level] increments
    that level's counter, resets deeper ones and starts intermediate
-   levels at 1. *)
+   levels at 1.
+   Complexity: O(level). *)
 let update_counters (counters : int list) (level : int) : int list =
   let rec aux curr_level acc = function
     | [] ->
@@ -26,6 +27,7 @@ let update_counters (counters : int list) (level : int) : int list =
   in
   aux 1 [] counters
 
+(* O(h); h = heading depth levels (at most 5). *)
 let format_counter (counters : int list) : string =
   String.concat "." (List.map string_of_int counters) ^ "."
 
@@ -33,7 +35,8 @@ let format_counter (counters : int list) : string =
    lowercase alnum/dash, each run of other characters collapses to one
    dash, no leading/trailing dash.  For *page* name slugs use
    Util.sanitize instead (page names are content, changing their rules
-   would rename pages and break links). *)
+   would rename pages and break links).
+   Complexity: O(len s). *)
 let slugify (s : string) : string =
   let buf = Buffer.create (String.length s) in
   let prev_is_dash = ref true in
@@ -59,6 +62,7 @@ let slugify (s : string) : string =
   else
     res
 
+(* O(len line). *)
 let parse_heading (line : string) : (int * string) option =
   let line = String.trim line in
   let len = String.length line in
@@ -71,6 +75,7 @@ let parse_heading (line : string) : (int * string) option =
   else
     Some (level, String.trim (String.sub line (level + 1) (len - level - 1)))
 
+(* O(L); L = raw length (single line-by-line pass). *)
 let collect_headings (raw : string) : heading list =
   (* Skip lines inside fenced code blocks: # comments there are not headings. *)
   let rec aux in_code counters acc = function

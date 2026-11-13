@@ -12,7 +12,11 @@
 
    Geometry is fetched from the Overpass API on first use and cached as raw
    JSON in a cache directory (one file per bounding box), so all later builds
-   are fully local and reproducible. Rendered as inline SVG. *)
+   are fully local and reproducible. Rendered as inline SVG.
+
+   Complexity notation below: f = map features, p = points of one geometry,
+   P = total geometry points, m = markers, B = binary-layer features,
+   L = JSON/text length, k = keys of a JSON object. *)
 
 open Sexp
 
@@ -66,7 +70,8 @@ type spec =
   ; world : bool
   }
 
-(* region for (center LAT LON WIDTH_KM) specs *)
+(* region for (center LAT LON WIDTH_KM) specs
+   Complexity: O(1). *)
 let region_of_center ~aspect lat lon w_km : (region, string) result =
   if w_km <= 0. || Float.abs lat > 90. || Float.abs lon > 180. then
     Error "center: bad LAT LON or non-positive WIDTH_KM"
@@ -87,7 +92,8 @@ let region_of_center ~aspect lat lon w_km : (region, string) result =
           east = lon +. half_lon;
         }
 
-(* w/h of the region as rendered (after the cos(lat) correction) *)
+(* w/h of the region as rendered (after the cos(lat) correction)
+   Complexity: O(1). *)
 let natural_aspect (r : region) : float =
   let clat = (r.south +. r.north) /. 2. in
   let kx = Float.cos (clat *. Float.pi /. 180.) in
@@ -96,13 +102,15 @@ let natural_aspect (r : region) : float =
 (* Display height (in ex) of a tall map of the given w/h aspect.  Tall
    maps are capped by area (60ex * 40ex, i.e. the footprint of a narrow
    60ex-tall map) rather than height alone, so squarish maps (Spain)
-   don't dominate the page while narrow ones (UK) still get 60ex. *)
+   don't dominate the page while narrow ones (UK) still get 60ex.
+   Complexity: O(1). *)
 let tall_area_cap = 60. *. 40.
 
 let tall_height_ex aspect =
   Float.min 60. (Float.sqrt (tall_area_cap /. Float.max 1e-6 aspect))
 
-(* pad a region (symmetrically) so the rendered map has aspect w/h = a *)
+(* pad a region (symmetrically) so the rendered map has aspect w/h = a
+   Complexity: O(1). *)
 let pad_to_aspect a (r : region) : region =
   let clat = (r.south +. r.north) /. 2. in
   let kx = Float.cos (clat *. Float.pi /. 180.) in
@@ -120,6 +128,7 @@ let float_of_atom = function
   | Atom a -> (try Some (float_of_string a) with _ -> None)
   | List _ -> None
 
+(* O(size of args): one pass over the directives. *)
 let parse_spec (args : sexp list) : (spec, string) result =
   let center = ref None in
   let country = ref None in
@@ -212,7 +221,8 @@ let parse_spec (args : sexp list) : (spec, string) result =
    update-map-geodata.py. *)
 
 (* memoized lookups: every repeated pipeline stage below (geodata files,
-   world bin decode, parsed region features) is one of these *)
+   world bin decode, parsed region features) is one of these
+   Complexity: first call per key costs f, later calls O(1) (Hashtbl). *)
 let memoize cache key f =
   match Hashtbl.find_opt cache key with
   | Some v -> v
@@ -223,6 +233,8 @@ let memoize cache key f =
 
 let json_file_cache : (string, Json.t option) Hashtbl.t = Hashtbl.create 4
 
+(* First call per path: O(L) disk read + JSON parse, L = file size;
+   memoized afterwards. *)
 let load_json_file path : Json.t option =
   memoize json_file_cache path
     (fun () -> try Some (Json.parse (Util.read_file path)) with _ -> None)
@@ -232,15 +244,19 @@ let geodata cache_dir =
   ( load_json_file (Filename.concat cache_dir "places.json"),
     load_json_file (Filename.concat cache_dir "country-outlines.json") )
 
-(* step deeper into nested JSON objects (None stays None) *)
+(* step deeper into nested JSON objects (None stays None)
+   Complexity: O(k); JSON objects are assoc lists, so each member step is
+   a linear scan over the object's k keys. *)
 let member_of (j : Json.t option) (key : string) : Json.t option =
   match j with Some t -> Json.member key t | None -> None
 
+(* O(k); k = keys of the outer object plus of the aliases object. *)
 let places_alias (places : Json.t option) name : string =
   match member_of (member_of places "aliases") name with
   | Some (Json.Str s) -> s
   | _ -> name
 
+(* O(P): one pass over all rings and their P points. *)
 let geom_of_rings (el : Json.t) : geom list =
   match Json.as_list el with
   | None -> []
@@ -263,7 +279,8 @@ let geom_of_rings (el : Json.t) : geom list =
 
 (* outlines with fewer points render as crude polygons (microstates at
    natural-earth 50m: Singapore has 8); those are better served by a
-   local Overpass map of the same (padded) bbox *)
+   local Overpass map of the same (padded) bbox
+   Complexity of outline_detailed below: O(P); P = total ring points. *)
 let min_outline_points = 50
 
 let outline_detailed (rings : geom list) : bool =
@@ -271,7 +288,8 @@ let outline_detailed (rings : geom list) : bool =
   npts >= min_outline_points
 
 (* margin around country maps so borders/islands don't sit right on the
-   frame edge (fraction of the span, per side) *)
+   frame edge (fraction of the span, per side)
+   Complexity: O(1). *)
 let pad_region frac (r : region) : region =
   let dlat = frac *. (r.north -. r.south)
   and dlon = frac *. (r.east -. r.west) in
@@ -284,7 +302,9 @@ let pad_region frac (r : region) : region =
 
 let country_pad = 0.06
 
-(* bbox + ring set under the named fields of one country entry *)
+(* bbox + ring set under the named fields of one country entry
+   Complexity: O(k + P): assoc scan over k top-level keys, then O(P)
+   ring decode. *)
 let outline_fields_of_name (outlines : Json.t option) name bbox_field
     rings_field : (region * geom list) option =
   match member_of outlines name with
@@ -299,19 +319,22 @@ let outline_fields_of_name (outlines : Json.t option) name bbox_field
       | _ -> None)
   | None -> None
 
-(* raw outline rings + region for a country name, regardless of detail *)
+(* raw outline rings + region for a country name, regardless of detail
+   Complexity: O(k + P), see outline_fields_of_name. *)
 let outline_of_name (outlines : Json.t option) name : (region * geom list) option
     =
   outline_fields_of_name outlines name "bbox" "rings"
 
 (* the unfiltered ring set + bbox of a country (far-away parts like
-   Rhodes east of mainland Greece or Alaska), when stored *)
+   Rhodes east of mainland Greece or Alaska), when stored
+   Complexity: O(k + P), see outline_fields_of_name. *)
 let world_outline_of_name (outlines : Json.t option) name :
     (region * geom list) option =
   outline_fields_of_name outlines name "world_bbox" "world_rings"
 
 (* fallback centre for country-attr values that are not countries
-   (islands, city-states too small for Natural Earth 50m) *)
+   (islands, city-states too small for Natural Earth 50m)
+   Complexity: O(k); k = keys of the country entries object. *)
 let place_country_center (places : Json.t option) name :
     (float * float * float) option =
   match member_of (member_of places "countries") name with
@@ -329,19 +352,23 @@ let place_country_center (places : Json.t option) name :
   | None -> None
 
 (* resolved (places, outlines, aliased name) for the country lookups
-   below, all keyed off the same cached geodata *)
+   below, all keyed off the same cached geodata
+   Complexity: O(1) once the geodata files are memoized (the first call
+   pays the O(L) file parse, L = file size). *)
 let country_geodata cache_dir country =
   let places, outlines = geodata cache_dir in
   (places, outlines, places_alias places country)
 
-(* used by Generator: does (map (country NAME)) resolve to something? *)
+(* used by Generator: does (map (country NAME)) resolve to something?
+   Complexity: O(k + P) after memoized geodata. *)
 let country_available cache_dir country : bool =
   let places, outlines, cname = country_geodata cache_dir country in
   outline_of_name outlines cname <> None
   || place_country_center places cname <> None
 
 (* used by Generator: the region a (country NAME) map would show
-   (padded, like the render) *)
+   (padded, like the render)
+   Complexity: O(k + P) after memoized geodata. *)
 let country_region cache_dir country : region option =
   let places, outlines, cname = country_geodata cache_dir country in
   match outline_of_name outlines cname with
@@ -356,7 +383,8 @@ let country_region cache_dir country : region option =
 
 (* used by Generator: the region covering ALL of a country's rings
    (including far-away parts) when stored; else the same as
-   country_region *)
+   country_region
+   Complexity: O(k + P) after memoized geodata. *)
 let country_region_full cache_dir country : region option =
   let _, outlines, cname = country_geodata cache_dir country in
   match world_outline_of_name outlines cname with
@@ -365,14 +393,16 @@ let country_region_full cache_dir country : region option =
 
 (* used by Generator: is the country's outline detailed enough that its
    map is a pure outline (vs. already a local Overpass map)?  city pages
-   of outlined countries get an additional local map of the city *)
+   of outlined countries get an additional local map of the city
+   Complexity: O(k + P) after memoized geodata. *)
 let country_outline_detailed cache_dir country : bool =
   let _, outlines, cname = country_geodata cache_dir country in
   match outline_of_name outlines cname with
   | Some (_, rings) -> outline_detailed rings
   | None -> false
 
-(* used by Generator: map marker coordinates for a city *)
+(* used by Generator: map marker coordinates for a city
+   Complexity: O(k); k = city entries, after memoized geodata. *)
 let city_coord cache_dir city : (float * float) option =
   let places, _ = geodata cache_dir in
   match member_of (member_of places "cities") city with
@@ -399,6 +429,7 @@ let world_base_file = ("world-base.bin", "VOKWB001", 1e-4)
 let world_bin_available cache_dir (file, _, _) =
   Sys.file_exists (Filename.concat cache_dir file)
 
+(* O(b); b = bytes of the varint. *)
 let read_varint (s : string) (pos : int ref) : int =
   let rec loop shift acc =
     let b = Char.code s.[!pos] in
@@ -416,6 +447,8 @@ type wb_feature = int * float * float * float * float * geom
 let world_bin_cache : (string, wb_feature array) Hashtbl.t =
   Hashtbl.create 2
 
+(* First call per file: O(file bytes) disk read + O(P) decode, P = total
+   points of all features in the layer; memoized afterwards. *)
 let world_bin_all cache_dir (file, magic, quant) : wb_feature array =
   memoize world_bin_cache file
     (fun () ->
@@ -487,7 +520,9 @@ out geom;
     bbox bbox bbox bbox bbox bbox
 
 (* Run curl; returns true on success (file exists and looks like JSON).
-   A custom UA is required: some instances reject default client agents. *)
+   A custom UA is required: some instances reject default client agents.
+   Complexity: O(network): shell-out to curl plus an O(L) read-back of
+   the response, L = response size. *)
 let curl_post (url : string) (query : string) (out_path : string) : bool =
   let query_file, oc = Filename.open_temp_file "overpass-query" ".txt" in
   output_string oc query;
@@ -513,6 +548,7 @@ let curl_post (url : string) (query : string) (out_path : string) : bool =
   | Some c -> String.length c > 0 && c.[0] = '{'
   | None -> false
 
+(* O(e) curl attempts, e = number of endpoints; each attempt O(network). *)
 let fetch_overpass (query : string) (out_path : string) : bool =
   List.exists
     (fun ep ->
@@ -520,7 +556,9 @@ let fetch_overpass (query : string) (out_path : string) : bool =
       curl_post ep query out_path)
     overpass_endpoints
 
-(* Get cached JSON for a region, fetching from Overpass if missing. *)
+(* Get cached JSON for a region, fetching from Overpass if missing.
+   Cache hit: O(file size) disk read.  Miss: O(network) fetch followed by
+   an O(L) minify + rewrite that turns it into a cache hit. *)
 let load_region_json (cache_dir : string) (r : region) : (string, string) result
     =
   let path = Filename.concat cache_dir (cache_filename r) in
@@ -581,7 +619,9 @@ type feature =
   | Outline of geom (* country border ring *)
   | Coast_line of geom (* open shoreline segments *)
 
-(* bin-layer features intersecting a region *)
+(* bin-layer features intersecting a region
+   Complexity: O(B) full scan of the layer's B features per call (bbox
+   filter; the decode itself is memoized, the filter is not). *)
 let world_bin_features cache_dir which (r : region) : feature list option =
   if not (world_bin_available cache_dir which) then None
   else
@@ -602,6 +642,7 @@ let world_bin_features cache_dir which (r : region) : feature list option =
 
 let tag_value tags k = Option.value ~default:"" (List.assoc_opt k tags)
 
+(* O(k); k = tag entries of the element. *)
 let tags_of (el : Json.t) : (string * string) list =
   match Json.member "tags" el with
   | Some (Json.Obj kvs) ->
@@ -610,6 +651,7 @@ let tags_of (el : Json.t) : (string * string) list =
         kvs
   | _ -> []
 
+(* O(p); p = points of the element's geometry. *)
 let geom_of (el : Json.t) : geom option =
   match Json.member "geometry" el with
   | Some (Json.Arr pts) ->
@@ -624,7 +666,10 @@ let geom_of (el : Json.t) : geom option =
       if List.length g >= 2 then Some g else None
   | _ -> None
 
-(* Join relation "outer" member ways into rings by matching endpoints. *)
+(* Join relation "outer" member ways into rings by matching endpoints.
+   Complexity: O(w * (w + P)) worst case, w = member ways, P = total
+   points - each merge step does a linear endpoint search, a filteri
+   removal and a list append. *)
 let assemble_rings (lines : geom list) : geom list =
   let eps = 1e-6 in
   let near (x1, y1) (x2, y2) = Float.abs (x1 -. x2) < eps && Float.abs (y1 -. y2) < eps in
@@ -666,6 +711,8 @@ let assemble_rings (lines : geom list) : geom list =
   in
   assemble_all lines
 
+(* O(size of element): O(k + p) for ways; relations add assemble_rings,
+   O(w * (w + P)) worst case. *)
 let feature_of_element (el : Json.t) : feature list =
   match Json.get_string "type" el with
   | Some "way" -> (
@@ -714,7 +761,8 @@ let svg_escape = Util.html_escape
 (* Projected point, rounded for compact SVG *)
 let fmt n = Printf.sprintf "%.0f" n
 
-(* Ramer-Douglas-Peucker polyline simplification on projected px coords. *)
+(* Ramer-Douglas-Peucker polyline simplification on projected px coords.
+   Complexity: expected O(p log p), worst case O(p^2); p = input points. *)
 let rdp (eps : float) (pts : (float * float) list) : (float * float) list =
   let arr = Array.of_list pts in
   let n = Array.length arr in
@@ -782,7 +830,8 @@ let nice_step span =
 
 let decimals_of_step s = int_of_float (Float.ceil (Float.max 0. (-. Float.log10 s)))
 
-(* nice_step-aligned values in [lo, hi] *)
+(* nice_step-aligned values in [lo, hi]
+   Complexity: O(t); t = number of ticks produced (span / step + 1). *)
 let tick_values step lo hi =
   let rec go v acc = if v > hi +. (step *. 1e-6) then List.rev acc else go (v +. step) (v :: acc) in
   go (Float.of_int (int_of_float (Float.ceil (lo /. step -. 1e-9))) *. step) []
@@ -794,6 +843,8 @@ let fmt_coord ?(dec = 5) v pos neg =
    countries missing from Natural Earth are just absent) *)
 let world_region = { south = -60.; west = -180.; north = 85.; east = 180. }
 
+(* O(total points of every country outline in country-outlines.json),
+   after the memoized O(L) file parse. *)
 let world_geometries cache_dir : feature list option =
   let _, outlines = geodata cache_dir in
   match outlines with
@@ -814,6 +865,8 @@ let world_geometries cache_dir : feature list option =
            kvs)
   | _ -> None
 
+(* O(L): full JSON parse plus one extraction pass over all elements and
+   their points; L = JSON text length. *)
 let features_of_json (json_text : string) : (feature list, string) result =
   match (try Ok (Json.parse json_text) with Json.Error e -> Error e) with
   | Error e -> Error ("failed to parse map data: " ^ e)
@@ -836,6 +889,7 @@ let feature_cache : (string, (feature list, string) result) Hashtbl.t =
    type layout changes; stale/corrupt bins are silently rebuilt. *)
 let bin_magic = "VOKOBE-FEATURES-2"
 
+(* O(bin file size) disk read + unmarshal. *)
 let read_bin path : feature list option =
   try
     let ic = open_in_bin path in
@@ -849,6 +903,7 @@ let read_bin path : feature list option =
         None
   with _ -> None
 
+(* O(size of the marshalled feature list) disk write. *)
 let write_bin path (fs : feature list) =
   try
     let oc = open_out_bin path in
@@ -857,6 +912,10 @@ let write_bin path (fs : feature list) =
     close_out oc
   with _ -> ()
 
+(* O(1) per call after the first for a region (memoized).  First call:
+   O(bin size) unmarshal when the binary sidecar is fresh, else O(L)
+   parse of the cached Overpass JSON, else an O(network) Overpass fetch;
+   a successful parse writes the .bin sidecar for later builds. *)
 let region_features (cache_dir : string) (r : region) :
     (feature list, string) result =
   let key = cache_filename r in
@@ -894,6 +953,12 @@ type placement = {
   p_big_ok : bool;
 }
 
+(* The full SVG pipeline.  Geometry: O(P) projection plus per-feature RDP
+   decimation, expected O(P log p_max), worst case O(P * p_max)
+   (P = total points, p_max = points of the largest geometry).  Label
+   placement: O(m^2) for m markers - each label tests a constant ~100
+   candidate spots against O(m) already-placed obstacle boxes, with at
+   most two passes. *)
 let render_svg (spec : spec) (r : region) (features : feature list) :
     (string, string) result =
   let markers = spec.markers in
@@ -1356,6 +1421,10 @@ let render_error (msg : string) : string =
     (%s)</div>"
     (svg_escape msg) (svg_escape msg)
 
+(* Entry point per (map ...) block: dominated by region_features (disk
+   O(bin/L) or O(network) on first use) plus render_svg; the offline
+   fallback adds an O(B) scan per binary layer.  Country/world maps pay
+   only geodata lookup + render_svg. *)
 let render_ (cache_dir : string) (args : sexp list) : string =
   let finish spec r features =
     match render_svg spec r features with

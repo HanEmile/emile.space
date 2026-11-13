@@ -27,7 +27,8 @@ let new_heading_state () : heading_state =
 type page_index = (string, Page.page) Hashtbl.t
 
 (* name -> page, built once per site and shared by all render passes
-   (replaces O(n) List.find_opt scans in the render hot path) *)
+   (replaces O(n) List.find_opt scans in the render hot path)
+   Complexity: O(n); n = pages. *)
 let page_index_of (pages : Page.page list) : page_index =
   let t = Hashtbl.create (List.length pages * 2) in
   List.iter (fun (p : Page.page) -> Hashtbl.replace t p.Page.name p) pages;
@@ -47,23 +48,28 @@ type context = {
 
 let page_link (p : Page.page) : string = "/" ^ p.name
 
-(* first value of an attribute, if present and non-empty *)
+(* first value of an attribute, if present and non-empty
+   Complexity: O(a); a = attrs of the page (assoc-list scan). *)
 let first_attr (p : Page.page) (key : string) : string option =
   match List.assoc_opt key p.Page.attrs with
   | Some (v :: _) -> Some v
   | _ -> None
 
-(* a page's tags, [] when untagged *)
+(* a page's tags, [] when untagged
+   Complexity: O(a); a = attrs of the page. *)
 let tags_of (p : Page.page) : string list =
   Option.value ~default:[] (List.assoc_opt "tag" p.Page.attrs)
 
-(* string compare honoring a desc direction flag *)
+(* string compare honoring a desc direction flag
+   Complexity: O(len of shorter string). *)
 let cmp_str ~desc a b =
   let c = String.compare a b in
   if desc then -c else c
 
 (* Group items by key, merging non-adjacent occurrences of the same key.
-   Keys keep first-appearance order, items keep their incoming order. *)
+   Keys keep first-appearance order, items keep their incoming order.
+   Complexity: O(i * g) with i = items, g = distinct groups (per item an
+   assoc scan plus an acc rebuild); worst case O(i^2) when all keys differ. *)
 let group_by_key (key_of : 'a -> string) (items : 'a list) : (string * 'a list) list =
   List.fold_left
     (fun acc x ->
@@ -73,6 +79,7 @@ let group_by_key (key_of : 'a -> string) (items : 'a list) : (string * 'a list) 
       else acc @ [(k, [x])])
     [] items
 
+(* O(1): Hashtbl lookup. *)
 let tag_link (index : page_index) (tag : string) : string =
   match Hashtbl.find_opt index tag with
   | Some target_page -> "/" ^ target_page.name
@@ -81,7 +88,8 @@ let tag_link (index : page_index) (tag : string) : string =
 (* Date values are rendered as links into the generated date archive
    (/YYYY, /YYYY-MM, /YYYY-MM-DD).  Only link the parts that actually have
    a page -- e.g. a (modified ...) stamp or a (published ...) date that
-   never became a date key must fall back to plain text. *)
+   never became a date key must fall back to plain text.
+   Complexity: O(len date_str): a constant number of Hashtbl lookups. *)
 let format_date_links (index : page_index) (date_str : string) : string =
   let part name label =
     if Hashtbl.mem index name then
@@ -100,7 +108,8 @@ let format_date_links (index : page_index) (date_str : string) : string =
   | _ -> Util.html_escape date_str
 
 (* a value naming a page renders as a local link; anything else as
-   plain escaped text *)
+   plain escaped text
+   Complexity: O(len v) for sanitize/escape; the page lookup is O(1). *)
 let local_link (ctx : context) (v : string) : string =
   let slug = Util.sanitize v in
   match Hashtbl.find_opt ctx.page_index slug with
@@ -110,7 +119,9 @@ let local_link (ctx : context) (v : string) : string =
   | None -> Util.html_escape v
 
 (* Rendered/HTML value of an attribute, for display (info bar, table
-   columns): dates become links, values naming a page become links. *)
+   columns): dates become links, values naming a page become links.
+   Complexity: O(a) assoc scans, a = page attrs; the location branch is
+   O(l^2) in l = number of cities (List.nth_opt once per index). *)
 let get_page_attr (ctx : context) (p : Page.page) (key : string) : string =
   (* single ISO date rendered as archive links *)
   let links d = format_date_links ctx.page_index d in
@@ -166,7 +177,8 @@ let get_page_attr (ctx : context) (p : Page.page) (key : string) : string =
 (* Raw (unformatted) value of an attribute, for query filters/sorts:
    attrs lookup, first value; the virtual keys (title/name/link) and the
    "date" fallback chain mirror get_page_attr, but no HTML is produced.
-   ISO dates compare correctly as plain strings. *)
+   ISO dates compare correctly as plain strings.
+   Complexity: O(a); a = attrs of the page. *)
 let get_page_attr_raw (p : Page.page) (key : string) : string =
   let lookup k = Option.value ~default:"" (first_attr p k) in
   match key with
@@ -190,6 +202,7 @@ let get_page_attr_raw (p : Page.page) (key : string) : string =
       | None -> "")
   | _ -> lookup key
 
+(* O(k * a): get_page_attr per info key; k = info keys, a = page attrs. *)
 let render_info_bar (ctx : context) : string =
   let p = ctx.current in
   match List.assoc_opt "info" p.attrs with
@@ -225,6 +238,8 @@ let render_info_bar (ctx : context) : string =
         String.concat " <br> " items ^
         "\n</div>\n"
 
+(* O(t * a) per page: t = nodes in the filter sexp, each leaf an O(a)
+   attr lookup; a = attrs of the page. *)
 let rec eval_filter (p : Page.page) (sx : sexp) : bool =
   match sx with
   | Atom "true" -> true
@@ -245,6 +260,12 @@ let rec eval_filter (p : Page.page) (sx : sexp) : bool =
       not (eval_filter p sub)
   | _ -> false
 
+(* The query engine.  Complexity over n = pages with a = attrs/page:
+   filtering O(n * a), sorting O(n log n) comparisons with an O(a) raw
+   attr lookup each, each emitted row O(cols * a).  Grouping adds:
+   group_by_key/field O(n * g) worst case (g = groups, see group_by_key),
+   group-by-tag O(t * n) for t = tag sections (one filter pass per tag)
+   plus O(t) dynamic-heading appends.  Output string built in one concat. *)
 let render_query_ (ctx : context) (args : sexp list) : string =
   let where_cond = ref (Atom "true") in
   let sort_key = ref "" in
@@ -444,6 +465,7 @@ let render_query (ctx : context) (args : sexp list) : string =
   incr prof_query_n;
   prof_time prof_query_t (fun () -> render_query_ ctx args)
 
+(* O(n * a): delegates to one tag-filtered query over all n pages. *)
 let render_navbar (ctx : context) : string =
   prof_time prof_navbar_t @@ fun () ->
   let nav_args = [
@@ -461,6 +483,7 @@ let render_navbar (ctx : context) : string =
     <li><a href="README.md">.md</a></li> -->
   </ul>|}
 
+(* O(h); h = headings. *)
 let render_toc (headings : Heading.heading list) : string =
   let items =
     List.mapi
@@ -474,7 +497,9 @@ let render_toc (headings : Heading.heading list) : string =
 
 (* does [text] contain a link reference to /name?  Pages link as
    [label](/name) or bare /name; the character after the match must not
-   be a slug char so /name does not count /name-foo as a backlink. *)
+   be a slug char so /name does not count /name-foo as a backlink.
+   Complexity: O(L * m) worst case; L = text length, m = name length
+   (naive scan with a String.sub compare per position). *)
 let references_name (text : string) (name : string) : bool =
   let needle = "/" ^ name in
   let nn = String.length needle and n = String.length text in
@@ -490,6 +515,9 @@ let references_name (text : string) (name : string) : bool =
   in
   loop 0
 
+(* O(n * L) per rendered page: references_name-scan over the raw text of
+   every page (n = pages, L = raw length).  Rendered once per page, so
+   the site-wide backlink cost is O(n^2 * L). *)
 let render_backlinks_ (ctx : context) : string =
   let refs =
     List.filter
@@ -519,6 +547,9 @@ let known_inline_ops = [
   "location"; "map"
 ]
 
+(* S-expression interpreter: O(size of the sexp) plus the cost of each
+   operator - query and map dominate (see render_query_/Roughmap.render),
+   everything else is linear in its arguments. *)
 let rec eval (ctx : context) (sx : sexp) : string =
   match sx with
   | Atom a -> Util.html_escape a
@@ -640,6 +671,10 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
       let args_str = String.concat " " (List.map (eval ctx) args) in
       "(" ^ Util.html_escape op ^ (if args_str = "" then "" else " " ^ args_str) ^ ")"
 
+(* Inline-markup renderer: O(L) expected, L = line length; worst case
+   O(L^2) on lines dense in failed markup candidates (each '[' or '**'
+   rescans the rest of the line via String.index_from_opt).  Each '('
+   candidate additionally runs parse_sexp_at, O(sexp size). *)
 and render_line (ctx : context) (line : string) : string =
   let len = String.length line in
   let buf = Buffer.create len in
@@ -734,7 +769,10 @@ and render_line (ctx : context) (line : string) : string =
 
 (* Returns [None] when no balanced s-expression can be read even by
    absorbing lines to EOF (unbalanced '('); the caller must then render
-   the lines as regular text instead of one giant escaped blob. *)
+   the lines as regular text instead of one giant escaped blob.
+   Complexity: O(s) when the sexp parses immediately; O(s^2) worst case
+   when it never balances - each retry re-parses the accumulated string
+   (s = total chars absorbed). *)
 let parse_multiline_sexp (first_line : string) (rest_lines : string list)
     : sexp option * string list =
   let rec loop current_str lines =
@@ -752,6 +790,8 @@ let parse_multiline_sexp (first_line : string) (rest_lines : string list)
 
 type block = Text of string | Code of string
 
+(* O(L); L = raw length (each line contributes to exactly one reopened
+   chunk concat). *)
 let split_code_blocks (raw : string) : block list =
   let lines = String.split_on_char '\n' raw in
   let rec aux in_code current_chunk acc = function
@@ -796,6 +836,7 @@ let open_para st =
     Buffer.add_string st.buf "<p>\n";
     st.in_para <- true)
 
+(* O(d); d = nesting depth of open lists above target_indent. *)
 let close_lists_to st target_indent =
   let rec loop = function
     | (top, ordered) :: rest when top > target_indent ->
@@ -817,7 +858,8 @@ let close_block st =
 (* Renders a heading already validated by Heading.parse_heading, so the
    body and the TOC (Heading.collect_headings) agree on what counts as a
    heading.  Numbering/toc-index are threaded through ctx.hstate, shared
-   with the dynamic (group tag) headings emitted by queries. *)
+   with the dynamic (group tag) headings emitted by queries.
+   Complexity: O(level + len title + d), d = open list depth. *)
 let render_heading st (ctx : context) level title =
   close_block st;
   ctx.hstate.counters <- Heading.update_counters ctx.hstate.counters level;
@@ -829,6 +871,7 @@ let render_heading st (ctx : context) level title =
     {|<h%d id="%s" style="--is: --h-%d"><a href="#%s">%s %s</a></h%d>|}
     level id idx id num_str (Util.html_escape title) level
 
+(* O(d + L); d = closed list depth, L = item text length (render_line). *)
 let render_list_entry st ctx indent ordered item_text =
   close_para st;
   close_lists_to st indent;
@@ -846,6 +889,7 @@ let render_list_entry st ctx indent ordered item_text =
       st.list_stack <- (indent, ordered) :: st.list_stack);
   Buffer.add_string st.buf (render_line ctx item_text)
 
+(* O(L); L = code text length. *)
 let render_code_block st (code_text : string) =
   close_block st;
   let lines = String.split_on_char '\n' code_text in
@@ -862,6 +906,10 @@ let render_code_block st (code_text : string) =
   let escaped_code = Util.html_escape (String.concat "\n" inner_lines) in
   Printf.bprintf st.buf "<pre><code>%s</code></pre>\n" escaped_code
 
+(* Block renderer: O(L) over L = block length, plus the cost of every
+   evaluated sexp (queries, maps, tables).  A page with an unbalanced
+   sexp opener triggers the parse_multiline_sexp fallback per line,
+   O(L^2) worst case overall. *)
 let render_text_block st (ctx : context) (text : string) =
   let rec process_lines lines =
     (* continued paragraph text (also used by the unbalanced-'(' fallback,
@@ -948,6 +996,7 @@ let render_text_block st (ctx : context) (text : string) =
   in
   process_lines (String.split_on_char '\n' text)
 
+(* O(L) plus per-sexp evaluation costs; L = raw source length. *)
 let render_body (ctx : context) (raw : string) : string =
   let st = create_state (String.length raw * 2) in
   let blocks = split_code_blocks raw in
@@ -959,6 +1008,8 @@ let render_body (ctx : context) (raw : string) : string =
   close_block st;
   Buffer.contents st.buf
 
+(* O(h + len body) plus one navbar query O(n * a); h = headings,
+   n = pages, a = attrs/page.  Called once per page in the hot path. *)
 let render_html (site_name : string) (ctx : context) (body : string) : string =
   let scope_style =
     match ctx.headings with

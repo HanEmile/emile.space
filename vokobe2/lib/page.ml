@@ -9,6 +9,7 @@ type page = {
 
 type list_kind = Ordered | Unordered
 
+(* O(len line). *)
 let parse_list_item (line : string) : (int * list_kind * string) option =
   let len = String.length line in
   let rec count_indent i =
@@ -36,6 +37,7 @@ let parse_list_item (line : string) : (int * list_kind * string) option =
         Some (indent, Ordered, text)
     | _ -> None
 
+(* O(L) worst case; L = raw length (short scan to the first "# " line). *)
 let page_title_of (name : string) (raw : string) : string =
   let lines = String.split_on_char '\n' raw in
   let rec find = function
@@ -48,6 +50,8 @@ let page_title_of (name : string) (raw : string) : string =
   in
   find lines
 
+(* O(a^2) worst case; a = attrs - per attr an assoc mem-check plus a
+   rebuild/append of the accumulator.  Tiny in practice (few keys/page). *)
 let merge_attrs (attrs_rev : (string * string list) list) : (string * string list) list =
   List.fold_left
     (fun acc (k, vs) ->
@@ -58,14 +62,16 @@ let merge_attrs (attrs_rev : (string * string list) list) : (string * string lis
     []
     (List.rev attrs_rev)
 
-(* (location "City") or (location "City" "Country") -> location/country attrs *)
+(* (location "City") or (location "City" "Country") -> location/country attrs
+   Complexity: O(v); v = number of values. *)
 let location_attrs (vals : sexp list) : (string * string list) list =
   match atoms vals with
   | [city; country] -> [("country", [country]); ("location", [city])]
   | str_vals -> [("location", str_vals)]
 
 (* Character ranges [start, stop) covered by fenced code blocks, so that
-   example s-expressions inside ``` blocks are not treated as metadata. *)
+   example s-expressions inside ``` blocks are not treated as metadata.
+   Complexity: O(L); L = raw length. *)
 let code_block_ranges (raw : string) : (int * int) list =
   let len = String.length raw in
   let rec aux pos in_code start acc =
@@ -86,6 +92,9 @@ let code_block_ranges (raw : string) : (int * int) list =
   in
   aux 0 false 0 []
 
+(* O(L) main scan, L = raw length, plus one parse_sexp_at per '(' found
+   outside code blocks; worst case O(L^2) when sexp parsing repeatedly
+   fails and rescans the tail.  Ends with merge_attrs, O(a^2). *)
 let parse_attrs (raw : string) : (string * string list) list =
   let len = String.length raw in
   let pos = ref 0 in
@@ -137,6 +146,8 @@ let parse_attrs (raw : string) : (string * string list) list =
   done;
   merge_attrs !attrs
 
+(* O(sum L): one disk read + parse_attrs pass per .md file in input_dir;
+   n = files, L = per-file size. *)
 let load_pages (input_dir : string) : page list =
   Sys.readdir input_dir
   |> Array.to_list

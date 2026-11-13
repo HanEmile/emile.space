@@ -5,6 +5,7 @@ let prof_time r f =
   r := !r +. (Unix.gettimeofday () -. t0);
   v
 
+(* O(file size) disk read. *)
 let read_file (path : string) : string =
   let ic = open_in_bin path in
   let n = in_channel_length ic in
@@ -12,6 +13,7 @@ let read_file (path : string) : string =
   close_in ic;
   s
 
+(* O(len content) disk write. *)
 let write_file (path : string) (content : string) : unit =
   let oc = open_out_bin path in
   output_string oc content;
@@ -20,6 +22,8 @@ let write_file (path : string) (content : string) : unit =
 let ensure_dir (path : string) : unit =
   if not (Sys.file_exists path) then Sys.mkdir path 0o755
 
+(* O(H * N) worst case; H = hay length, N = needle length (naive scan
+   with a String.sub + compare per position). *)
 let contains_substring (hay : string) (needle : string) : bool =
   let hn = String.length hay and nn = String.length needle in
   if nn = 0 then true
@@ -39,6 +43,7 @@ let drop_prefix ~(prefix : string) (s : string) : string =
   let pl = String.length prefix in
   if starts_with ~prefix s then String.sub s pl (String.length s - pl) else s
 
+(* O(len s). *)
 let html_escape (s : string) : string =
   let buf = Buffer.create (String.length s) in
   String.iter
@@ -52,6 +57,7 @@ let html_escape (s : string) : string =
     s;
   Buffer.contents buf
 
+(* O(len s). *)
 let sanitize (s : string) : string =
   let s = String.map (fun c -> if c = ' ' then '-' else c) s in
   let buf = Buffer.create (String.length s) in
