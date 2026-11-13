@@ -186,8 +186,10 @@ Second paragraph.
                && contains p.raw "Upcoming: [Later](/later)")
    | None -> assert false);
 
-  (* /on-this-day: events cluster under their month-day section *)
-  (match Vokobe2.Generator.generate_on_this_day [ongoing] with
+  (* /on-this-day: events cluster under their month-day section
+     (date-range-str is normally added by add_date_range_str at load) *)
+  (match Vokobe2.Generator.generate_on_this_day
+            (Vokobe2.Generator.add_date_range_str [ongoing]) with
    | Some p ->
        assert (contains p.raw "## November 13" && contains p.raw "[Trip](/trip)")
    | None -> assert false);
