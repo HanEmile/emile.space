@@ -589,9 +589,11 @@ let render_toc (headings : Heading.heading list) : string =
   let items =
     List.mapi
       (fun i (h : Heading.heading) ->
+        (* --for must be on the <li>: scroll-snap-align only listens to
+           block-level boxes, and the li is what gets snapped into view *)
         Printf.sprintf
-          {|<li class="toc-h%d"><a href="#%s" style="--for: --h-%d">%s</a></li>|}
-          h.level h.slug i h.number_str)
+          {|<li class="toc-h%d" style="--for: --h-%d"><a href="#%s">%s</a></li>|}
+          h.level i h.slug h.number_str)
       headings
   in
   "<ul class=\"toc\">\n" ^ String.concat "" items ^ "</ul>"

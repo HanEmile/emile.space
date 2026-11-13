@@ -159,16 +159,24 @@ h1, h2, h3, h4, h5, h6 {
   view-timeline-axis: block;
 }
 .toc a:not(:hover, :focus-visible) {
-  animation: toc-highlight linear, var(--snap-anim, none) linear;
+  animation: toc-highlight linear;
   animation-timeline: var(--for);
   animation-range: cover 0% cover 100%;
-  animation-fill-mode: none, forwards;
+  animation-fill-mode: none;
 }
-.toc:not(:hover, :has(:focus-visible)) a:not(:hover, :focus-visible) {
-  --snap-anim: toc-snap;
+/* the entry of the section currently in view keeps the toc container
+   snapped to it, so a long toc scrolls along with the page.  the
+   snap-align must sit on the block-level <li> (an inline <a> never
+   forms a snap area); while you're hovering/keyboard-navigating the
+   toc itself the animation is disabled so it stops fighting you */
+.toc:not(:hover, :has(:focus-visible)) li {
+  animation: toc-snap linear;
+  animation-timeline: var(--for);
+  animation-range: cover 0% cover 100%;
+  animation-fill-mode: none;
 }
 @media only screen and (min-width: 1360px) {
-  .toc { scroll-snap-type: y mandatory; }
+  .toc { scroll-snap-type: y mandatory; overflow-anchor: none; }
 }
 @keyframes toc-highlight {
   0%, 99.9% { color: var(--hl-fg); background: var(--hl-bg); }
