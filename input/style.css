@@ -261,8 +261,13 @@ svg.roughmap .shaded { fill: rgba(214, 165, 25, 0.30); }
 @media print { .related { display: none; } }
 
 
-/* heading bars are light-gray (#dddddd) in BOTH themes, so heading text
-   and heading anchors must stay dark -- in dark mode a{color:#dddddd}
-   otherwise puts light-gray link text on the light-gray bar */
+/* heading bars are light-gray (#dddddd) in both themes; heading links
+   read as inverted chips on them (the number's self-anchor and, in
+   books, the chapter title's page link alike) */
 h1, h2, h3, h4, h5 { color: #040404; }
-h1 a, h2 a, h3 a, h4 a, h5 a { color: #040404; background: none; }
+@media (prefers-color-scheme: light) {
+  h1 a, h2 a, h3 a, h4 a, h5 a { color: #040404; background: #ffffff; }
+}
+@media (prefers-color-scheme: dark) {
+  h1 a, h2 a, h3 a, h4 a, h5 a { color: #dddddd; background: #040404; }
+}
