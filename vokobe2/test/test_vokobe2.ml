@@ -71,10 +71,28 @@ let () =
   let target_page = mk_page "target" "# target\n\n(backlinks)\n" in
   let linker = mk_page "linker" "# linker\n\nsee [notes](/target)\n" in
   let prefixer = mk_page "prefixer" "# prefixer\n\nsee [x](/target-ext)\n" in
-  let pages = [target_page; linker; prefixer] in
+  let anchored =
+    mk_page "anchored" "# lands\n\n## Deep Section\n\ngo [there](/target)\n"
+  in
+  (* external urls and plain text mentioning /target must NOT count *)
+  let faker =
+    mk_page "faker"
+      "see https://flickr.com/target/?q=1 and rm target/index.html\n"
+  in
+  let bare = mk_page "bare" "the /target page is neat (not a link)\n" in
+  let linkop =
+    mk_page "linkop" "# op\n\n(link \"/target\" \"the target\")\n"
+  in
+  let pages = [target_page; linker; prefixer; anchored; faker; bare; linkop] in
   let backlinks = Vokobe2.Render.render_backlinks (ctx pages target_page) in
   assert (contains backlinks "/linker");
   assert (not (contains backlinks "/prefixer"));
+  assert (not (contains backlinks "/faker") && not (contains backlinks "faker"));
+  assert (not (contains backlinks "/bare"));
+  (* anchored backlinks point at the place on the page they link from *)
+  assert (contains backlinks {|<a href="/anchored#deep-section"|});
+  (* the sexp (link ...) op counts too *)
+  assert (contains backlinks {|<a href="/linkop#op"|});
 
   (* heading numbering stays continuous across static headings and
      (group tag) query headings; no duplicate numbers/ids *)

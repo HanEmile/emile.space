@@ -541,66 +541,117 @@ let references_name (text : string) (name : string) : bool =
    in the index exactly when they are in the ctx.pages list, as before.
    Complexity: O(n * L) once per pages list (n = pages, L = raw length);
    lookup O(1). *)
-type backlinks = (string, Page.page list) Hashtbl.t
+(* a backlink: the page that links, plus the anchor of the nearest
+   preceding markdown heading (the place on the page it links from) *)
+type backlink = { b_page : Page.page; b_anchor : string option }
+type backlinks = (string, backlink list) Hashtbl.t
 
 let backlinks_cache : (Page.page list * backlinks) option ref = ref None
 
+(* Only REAL internal link destinations count: markdown [text](/target)
+   and (link "/target" ...).  Plain-text "/name" substrings (external
+   urls, prose, code) are ignored -- the old any-substring scan produced
+   phantom links, e.g. a flickr.com/search url backlinking /search.
+   Edges remember the nearest preceding heading so backlinks point at
+   the place on the page they link from.  O(n * L). *)
 let build_backlinks (pages : Page.page list) : backlinks =
   let names = page_index_of pages in
-  (* boundary chars (references_name's slug_char) vs. chars any page
-     name may contain (slug chars plus dotted/underscored names) *)
-  let is_slug = Array.make 256 false in
-  let is_name_char = Array.make 256 false in
-  String.iter
-    (fun c ->
-      is_slug.(Char.code c) <- true;
-      is_name_char.(Char.code c) <- true)
-    "abcdefghijklmnopqrstuvwxyz0123456789-";
-  List.iter
-    (fun (p : Page.page) ->
-      String.iter (fun c -> is_name_char.(Char.code c) <- true) p.Page.name)
-    pages;
-  is_name_char.(Char.code '/') <- false;
-  let add_edge edges (p : Page.page) seen name =
-    if name <> "" && name <> p.Page.name && Hashtbl.mem names name
-       && not (Hashtbl.mem seen name)
-    then begin
+  let edges : backlinks = Hashtbl.create 256 in
+  let add_edge (p : Page.page) seen name anchor =
+    if name <> p.Page.name && not (Hashtbl.mem seen name) then begin
       Hashtbl.replace seen name ();
       let prev =
         match Hashtbl.find_opt edges name with Some ps -> ps | None -> []
       in
-      Hashtbl.replace edges name (p :: prev)
+      Hashtbl.replace edges name
+        ({ b_page = p; b_anchor = anchor } :: prev)
     end
   in
-  let edges : backlinks = Hashtbl.create 256 in
-  List.iter
-    (fun (p : Page.page) ->
-      let text = p.Page.raw in
-      let n = String.length text in
-      let seen : (string, unit) Hashtbl.t = Hashtbl.create 16 in
-      let i = ref 0 in
-      while !i + 1 < n do
-        if text.[!i] = '/' && is_name_char.(Char.code text.[!i + 1]) then begin
-          let start = !i + 1 in
-          let stop = ref start in
-          while !stop < n && is_name_char.(Char.code text.[!stop]) do
-            incr stop
+  let normalize t =
+    (* internal page target: "/name", fragment and trailing slash dropped *)
+    let len = String.length t in
+    if len < 2 || t.[0] <> '/' || t.[1] = '/' then None
+    else
+      let t =
+        match String.index_opt t '#' with
+        | Some i -> String.sub t 0 i
+        | None -> t
+      in
+      let len = String.length t in
+      let t =
+        if len > 1 && t.[len - 1] = '/' then String.sub t 0 (len - 1)
+        else t
+      in
+      let name = String.sub t 1 (String.length t - 1) in
+      if Hashtbl.mem names name then Some name else None
+  in
+  let scan_line p seen anchor line =
+    let n = String.length line in
+    let emit t =
+      match normalize t with
+      | Some name -> add_edge p seen name anchor
+      | None -> ()
+    in
+    let i = ref 0 in
+    while !i < n do
+      if !i + 1 < n && line.[!i] = ']' && line.[!i + 1] = '(' then
+        (* markdown [text](dest) *)
+        match String.index_from_opt line (!i + 2) ')' with
+        | Some j ->
+            emit (String.trim (String.sub line (!i + 2) (j - !i - 2)));
+            i := j + 1
+        | None -> i := n
+      else if !i + 5 < n && String.sub line !i 5 = "(link" then begin
+        (* (link "dest" ...): dest is a quoted sexp atom *)
+        let j = ref (!i + 5) in
+        while !j < n && (line.[!j] = ' ' || line.[!j] = '\t') do
+          incr j
+        done;
+        if !j < n && line.[!j] = '"' then begin
+          let buf = Buffer.create 16 in
+          let k = ref (!j + 1) in
+          let done_ = ref false in
+          while (not !done_) && !k < n do
+            if line.[!k] = '\\' && !k + 1 < n then (
+              Buffer.add_char buf line.[!k + 1];
+              k := !k + 2)
+            else if line.[!k] = '"' then done_ := true
+            else (
+              Buffer.add_char buf line.[!k];
+              incr k)
           done;
-          (* every run prefix ending at a non-slug char (or at the run's
-             end) is a referenced name *)
-          for j = start to !stop - 1 do
-            if j + 1 = !stop || not is_slug.(Char.code text.[j + 1]) then
-              add_edge edges p seen (String.sub text start (j - start + 1))
-          done;
-          i := !stop
+          emit (Buffer.contents buf);
+          i := !k + 1
         end
         else incr i
+      end
+      else incr i
+    done
+  in
+  List.iter
+    (fun (p : Page.page) ->
+      let seen : (string, unit) Hashtbl.t = Hashtbl.create 16 in
+      let raw = p.Page.raw in
+      let len = String.length raw in
+      let anchor = ref None in
+      let pos = ref 0 in
+      while !pos < len do
+        let line_end =
+          match String.index_from_opt raw !pos '\n' with
+          | Some nl -> nl
+          | None -> len
+        in
+        let line = String.sub raw !pos (line_end - !pos) in
+        (match Heading.parse_heading line with
+         | Some (_, title) -> anchor := Some (Heading.slugify title)
+         | None -> ());
+        scan_line p seen !anchor line;
+        pos := line_end + 1
       done)
     pages;
   (* buckets were built by prepending; restore page-list order *)
   Hashtbl.filter_map_inplace (fun _ ps -> Some (List.rev ps)) edges;
   edges
-
 let backlinks_of (pages : Page.page list) : backlinks =
   match !backlinks_cache with
   | Some (key, edges) when key == pages -> edges
@@ -622,9 +673,14 @@ let render_backlinks_ (ctx : context) : string =
   | _ ->
       let items =
         List.map
-          (fun p ->
-            Printf.sprintf "<a href=\"%s\">%s</a><br>" (page_link p)
-              (Util.html_escape p.title))
+          (fun (bl : backlink) ->
+            let href =
+              match bl.b_anchor with
+              | Some a -> page_link bl.b_page ^ "#" ^ a
+              | None -> page_link bl.b_page
+            in
+            Printf.sprintf "<a href=\"%s\">%s</a><br>" href
+              (Util.html_escape bl.b_page.title))
           refs
       in
       "<div class=\"backlinks\">Backlinks<br>\n" ^ String.concat "" items ^ "</div>"
