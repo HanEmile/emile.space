@@ -9,26 +9,41 @@ let prof_time name f =
   v
 
 let () =
-  if Array.length Sys.argv < 4 then (
-    Printf.eprintf
+  let offline = ref false in
+  let dump_queries = ref false in
+  let positional = ref [] in
+  let usage =
+    Printf.sprintf
       "usage: %s <input_dir> <output_dir> <site_name> [--offline] \
-       [--dump-missing-queries]\n"
-      Sys.argv.(0);
-    exit 1);
-  let input_dir = Sys.argv.(1) in
-  let output_dir = Sys.argv.(2) in
-  let site_name = Sys.argv.(3) in
-
-  let flags = Array.sub Sys.argv 4 (Array.length Sys.argv - 4) in
-  (* --offline: never fetch external data (map regions without a local
-     cache render a placeholder instead) *)
-  if Array.exists (( = ) "--offline") flags then begin
+       [--dump-missing-queries]"
+      Sys.argv.(0)
+  in
+  Arg.parse
+    [
+      (* --offline: never fetch external data (map regions without a
+         local cache render a placeholder instead) *)
+      ("--offline", Arg.Set offline,
+       " never fetch external data");
+      (* --dump-missing-queries: don't fetch; write map-cache/*.query
+         files for fetch-map-cache.sh (parallel download, e.g. on a fast
+         host) *)
+      ("--dump-missing-queries", Arg.Set dump_queries,
+       " write map-cache/*.query files instead of fetching");
+    ]
+    (fun arg -> positional := arg :: !positional)
+    usage;
+  let input_dir, output_dir, site_name =
+    match List.rev !positional with
+    | [i; o; s] -> (i, o, s)
+    | _ ->
+        Printf.eprintf "%s\n" usage;
+        exit 1
+  in
+  if !offline then begin
     Roughmap.set_offline true;
     Printf.printf "[map] offline mode: skipping external data fetches\n%!"
   end;
-  (* --dump-missing-queries: don't fetch; write map-cache/*.query files
-     for fetch-map-cache.sh (parallel download, e.g. on a fast host) *)
-  if Array.exists (( = ) "--dump-missing-queries") flags then begin
+  if !dump_queries then begin
     Roughmap.set_dump_queries true;
     Printf.printf "[map] dumping missing region queries instead of fetching\n%!"
   end;
@@ -92,21 +107,31 @@ let () =
     (List.length attr_pages)
     (List.length hidden_pages);
 
+  (* name -> page, built once and shared by every render *)
+  let page_index = Render.page_index_of all_visible in
   let render_page pages page =
     let headings = Heading.collect_headings page.Page.raw in
-    (* First pass: discover any headings emitted dynamically by queries *)
-    Render.dynamic_headings := [];
-    Render.current_heading_counters := [];
-    Render.current_toc_index := 0;
-    let ctx0 = Render.{ pages; current = page; headings; map_cache_dir } in
-    let _ = Render.render_body ctx0 page.raw in
-    let extra = !Render.dynamic_headings in
+    let make_ctx headings collect_only =
+      Render.
+        {
+          pages;
+          page_index;
+          current = page;
+          headings;
+          hstate = Render.new_heading_state ();
+          map_cache_dir;
+          collect_only;
+        }
+    in
+    (* First pass: discover any headings emitted dynamically by queries.
+       collect_only=true skips output-only work (maps, nav, backlinks,
+       toc); (query ...) still runs so its headings are collected. *)
+    let ctx0 = make_ctx headings true in
+    let _ = Render.render_body ctx0 page.Page.raw in
+    let extra = ctx0.hstate.dynamic_headings in
     (* Second pass: render with the full heading list so (toc) sees everything *)
-    Render.dynamic_headings := [];
-    Render.current_heading_counters := [];
-    Render.current_toc_index := 0;
-    let ctx = Render.{ pages; current = page; headings = headings @ extra; map_cache_dir } in
-    let body = Render.render_body ctx page.raw in
+    let ctx = make_ctx (headings @ extra) false in
+    let body = Render.render_body ctx page.Page.raw in
     let html = Render.render_html site_name ctx body in
     let out_path = Filename.concat output_dir (page.name ^ ".html") in
     Util.ensure_dir (Filename.dirname out_path);

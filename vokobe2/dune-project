@@ -7,19 +7,13 @@
 (source
  (github hanemile/vokobe2))
 
-(authors "Emile Hansmaennel <ocaml@emile.space>")
+(authors "Emile")
 
-(maintainers "Emile Hansmaennel <ocaml@emile.space>")
-
-(license LICENSE)
-
-(documentation https://url/to/documentation)
+(maintainers "Emile")
 
 (package
  (name vokobe2)
- (synopsis "A static site generator")
- (description
-  "Once apon a time, the need for a static site generator arose, so I built one!")
+ (synopsis "vokobe2 — static site generator for emile.space")
  (depends ocaml)
  (tags ("static-site-generator")))
 

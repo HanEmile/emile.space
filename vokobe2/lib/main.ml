@@ -1,2 +1,2 @@
-(* This file is intentionally empty. See the individual modules:
-   Util, Sexp, Page, Heading, Render, Generator *)
+(** vokobe2: static site generator library
+    (Util, Sexp, Page, Heading, Render, Generator, Json, Roughmap). *)

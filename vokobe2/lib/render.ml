@@ -13,16 +13,41 @@ let prof_sxparse_t = ref 0.
 let prof_backlinks_t = ref 0.
 let prof_navbar_t = ref 0.
 
-type context = {
-  pages : Page.page list;
-  current : Page.page;
-  headings : Heading.heading list;
-  map_cache_dir : string;
+(* Mutable per-render heading bookkeeping: numbering counters, TOC index
+   and the headings emitted dynamically by (query ... (group tag) ...).
+   This is the single source of truth for heading numbering; a fresh
+   instance is created for each render pass and threaded through the
+   context so the query renderer (which never sees render_state) can
+   register its headings too. *)
+type heading_state = {
+  mutable counters : int list;
+  mutable toc_index : int;
+  mutable dynamic_headings : Heading.heading list;
 }
 
-let dynamic_headings : Heading.heading list ref = ref []
-let current_heading_counters : int list ref = ref []
-let current_toc_index : int ref = ref 0
+let new_heading_state () : heading_state =
+  { counters = []; toc_index = 0; dynamic_headings = [] }
+
+type page_index = (string, Page.page) Hashtbl.t
+
+(* name -> page, built once per site and shared by all render passes
+   (replaces O(n) List.find_opt scans in the render hot path) *)
+let page_index_of (pages : Page.page list) : page_index =
+  let t = Hashtbl.create (List.length pages * 2) in
+  List.iter (fun (p : Page.page) -> Hashtbl.replace t p.Page.name p) pages;
+  t
+
+type context = {
+  pages : Page.page list;
+  page_index : page_index;
+  current : Page.page;
+  headings : Heading.heading list;
+  hstate : heading_state;
+  map_cache_dir : string;
+  (* first pass only: skip output-only work (maps, nav, backlinks, toc);
+     (query ...) still runs so its dynamic headings are collected *)
+  collect_only : bool;
+}
 
 let page_link (p : Page.page) : string = "/" ^ p.name
 
@@ -37,33 +62,35 @@ let group_by_key (key_of : 'a -> string) (items : 'a list) : (string * 'a list) 
       else acc @ [(k, [x])])
     [] items
 
-let page_has_tag (p : Page.page) (target_tag : string) : bool =
-  List.exists
-    (fun (k, vals) -> k = "tag" && List.mem target_tag vals)
-    p.attrs
-
-let tag_link (pages : Page.page list) (tag : string) : string =
-  match List.find_opt (fun (p : Page.page) -> p.name = tag) pages with
+let tag_link (index : page_index) (tag : string) : string =
+  match Hashtbl.find_opt index tag with
   | Some target_page -> "/" ^ target_page.name
   | None -> "/" ^ tag
 
-let format_date_links (date_str : string) : string =
+(* Date values are rendered as links into the generated date archive
+   (/YYYY, /YYYY-MM, /YYYY-MM-DD).  Only link the parts that actually have
+   a page -- e.g. a (modified ...) stamp or a (published ...) date that
+   never became a date key must fall back to plain text. *)
+let format_date_links (index : page_index) (date_str : string) : string =
+  let part name label =
+    if Hashtbl.mem index name then
+      Printf.sprintf {|<a href="/%s" class="local">%s</a>|} name
+        (Util.html_escape label)
+    else Util.html_escape label
+  in
   match String.split_on_char '-' (String.trim date_str) with
   | [year; month; day] ->
-      Printf.sprintf
-        {|<a href="/%s" class="local">%s</a>-<a href="/%s-%s" class="local">%s</a>-<a href="/%s-%s-%s" class="local">%s</a>|}
-        year year year month month year month day day
+      Printf.sprintf "%s-%s-%s" (part year year)
+        (part (year ^ "-" ^ month) month)
+        (part (year ^ "-" ^ month ^ "-" ^ day) day)
   | [year; month] ->
-      Printf.sprintf
-        {|<a href="/%s" class="local">%s</a>-<a href="/%s-%s" class="local">%s</a>|}
-        year year year month month
-  | [year] ->
-      Printf.sprintf
-        {|<a href="/%s" class="local">%s</a>|}
-        year year
+      Printf.sprintf "%s-%s" (part year year) (part (year ^ "-" ^ month) month)
+  | [year] -> part year year
   | _ -> Util.html_escape date_str
 
-let get_page_attr (pages : Page.page list) (p : Page.page) (key : string) : string =
+(* Rendered/HTML value of an attribute, for display (info bar, table
+   columns): dates become links, values naming a page become links. *)
+let get_page_attr (ctx : context) (p : Page.page) (key : string) : string =
   match key with
   | "title" -> p.title
   | "name" -> p.name
@@ -71,14 +98,14 @@ let get_page_attr (pages : Page.page list) (p : Page.page) (key : string) : stri
   | "date-range" -> (
       match List.assoc_opt "date-start" p.attrs with
       | Some (d :: _) ->
-          let start_html = format_date_links d in
+          let start_html = format_date_links ctx.page_index d in
           (match List.assoc_opt "date-end" p.attrs with
-           | Some (e :: _) when e <> d -> start_html ^ " – " ^ format_date_links e
+           | Some (e :: _) when e <> d -> start_html ^ " – " ^ format_date_links ctx.page_index e
            | _ -> start_html)
       | _ -> "")
   | "published" | "modified" -> (
       match List.assoc_opt key p.attrs with
-      | Some (d :: _) -> format_date_links d
+      | Some (d :: _) -> format_date_links ctx.page_index d
       | _ -> "")
   | "date" -> (
       let start =
@@ -92,14 +119,14 @@ let get_page_attr (pages : Page.page list) (p : Page.page) (key : string) : stri
       in
       match start with
       | Some d ->
-          let start_html = format_date_links d in
+          let start_html = format_date_links ctx.page_index d in
           (match List.assoc_opt "date-end" p.attrs with
-           | Some (e :: _) when e <> d -> start_html ^ " – " ^ format_date_links e
+           | Some (e :: _) when e <> d -> start_html ^ " – " ^ format_date_links ctx.page_index e
            | _ -> start_html)
       | None -> "")
   | "date-end" -> (
       match List.assoc_opt "date-end" p.attrs with
-      | Some (d :: _) -> format_date_links d
+      | Some (d :: _) -> format_date_links ctx.page_index d
       | _ -> "")
   | "tag" | "tags" -> (
       match List.assoc_opt "tag" p.attrs with
@@ -108,14 +135,14 @@ let get_page_attr (pages : Page.page list) (p : Page.page) (key : string) : stri
           |> List.map (fun t ->
                  Printf.sprintf
                  {|<a href="%s" class="local">%s</a>|}
-                 (tag_link pages t) t)
+                 (tag_link ctx.page_index t) (Util.html_escape t))
           |> String.concat ", "
       | None -> "")
   | "location" ->
       (* Zip cities and countries into "City, Country" pairs, " / " separated *)
       let render_val v =
         let slug = Util.sanitize v in
-        match List.find_opt (fun (tp : Page.page) -> tp.name = slug) pages with
+        match Hashtbl.find_opt ctx.page_index slug with
         | Some _ -> Printf.sprintf {|<a href="/%s" class="local">%s</a>|} slug (Util.html_escape v)
         | None -> Util.html_escape v
       in
@@ -134,7 +161,7 @@ let get_page_attr (pages : Page.page list) (p : Page.page) (key : string) : stri
           vals
           |> List.map (fun v ->
                  let slug = Util.sanitize v in
-                 match List.find_opt (fun (tp : Page.page) -> tp.name = slug) pages with
+                 match Hashtbl.find_opt ctx.page_index slug with
                  | Some _ ->
                      Printf.sprintf
                      {|<a href="/%s" class="local">%s</a>|}
@@ -142,6 +169,36 @@ let get_page_attr (pages : Page.page list) (p : Page.page) (key : string) : stri
                  | None -> Util.html_escape v)
           |> String.concat ", "
       | None -> "")
+
+(* Raw (unformatted) value of an attribute, for query filters/sorts:
+   attrs lookup, first value; the virtual keys (title/name/link) and the
+   "date" fallback chain mirror get_page_attr, but no HTML is produced.
+   ISO dates compare correctly as plain strings. *)
+let get_page_attr_raw (p : Page.page) (key : string) : string =
+  let lookup k = match List.assoc_opt k p.attrs with
+    | Some (v :: _) -> v
+    | _ -> ""
+  in
+  match key with
+  | "title" -> p.title
+  | "name" -> p.name
+  | "link" -> p.name
+  | "date" ->
+      let v = lookup "date-start" in
+      if v <> "" then v
+      else
+        let v = lookup "published" in
+        if v <> "" then v
+        else lookup "date"
+  | "tag" | "tags" -> (
+      match List.assoc_opt "tag" p.attrs with
+      | Some tags -> String.concat " " tags
+      | None -> "")
+  | "location" -> (
+      match List.assoc_opt "location" p.attrs with
+      | Some cities -> String.concat " " cities
+      | None -> "")
+  | _ -> lookup key
 
 let render_info_bar (ctx : context) : string =
   let p = ctx.current in
@@ -151,7 +208,7 @@ let render_info_bar (ctx : context) : string =
       let items =
         List.filter_map
           (fun key ->
-            let val_str = get_page_attr ctx.pages p key in
+            let val_str = get_page_attr ctx p key in
             if val_str = "" then None
             else
               let index_key = match key with
@@ -159,7 +216,7 @@ let render_info_bar (ctx : context) : string =
                 | k -> k
               in
               let key_label =
-                match List.find_opt (fun (tp : Page.page) -> tp.name = index_key) ctx.pages with
+                match Hashtbl.find_opt ctx.page_index index_key with
                 | Some _ ->
                     Printf.sprintf
                     {|<a href="/%s" class="local">%s</a>|}
@@ -178,26 +235,26 @@ let render_info_bar (ctx : context) : string =
         String.concat " <br> " items ^
         "\n</div>\n"
 
-let rec eval_filter (pages : Page.page list) (p : Page.page) (sx : sexp) : bool =
+let rec eval_filter (p : Page.page) (sx : sexp) : bool =
   match sx with
   | Atom "true" -> true
   | List [Atom "tag"; Atom t] ->
       let tags = match List.assoc_opt "tag" p.attrs with Some ts -> ts | None -> [] in
       List.mem t tags
   | List [Atom "eq"; Atom key; Atom target] ->
-      get_page_attr pages p key = target
+      get_page_attr_raw p key = target
   | List [Atom "contains"; Atom key; Atom needle] ->
-      Util.contains_substring (get_page_attr pages p key) needle
+      Util.contains_substring (get_page_attr_raw p key) needle
   | List [Atom "has"; Atom key; Atom needle] ->
       (match List.assoc_opt key p.attrs with
        | Some vals -> List.mem needle vals
        | None -> false)
   | List (Atom "and" :: rest) ->
-      List.for_all (eval_filter pages p) rest
+      List.for_all (eval_filter p) rest
   | List (Atom "or" :: rest) ->
-      List.exists (eval_filter pages p) rest
+      List.exists (eval_filter p) rest
   | List [Atom "not"; sub] ->
-      not (eval_filter pages p sub)
+      not (eval_filter p sub)
   | _ -> false
 
 let render_query_ (ctx : context) (args : sexp list) : string =
@@ -245,13 +302,13 @@ let render_query_ (ctx : context) (args : sexp list) : string =
       | _ -> ())
     args;
 
-  let matched = List.filter (fun p -> eval_filter ctx.pages p !where_cond) ctx.pages in
+  let matched = List.filter (fun p -> eval_filter p !where_cond) ctx.pages in
   let sorted =
     if !sort_key <> "" then
       List.sort
         (fun a b ->
-          let va = get_page_attr ctx.pages a !sort_key in
-          let vb = get_page_attr ctx.pages b !sort_key in
+          let va = get_page_attr_raw a !sort_key in
+          let vb = get_page_attr_raw b !sort_key in
           let cmp = String.compare va vb in
           if !sort_desc then -cmp else cmp)
         matched
@@ -305,7 +362,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
         ^ String.concat ""
             (List.map
                (fun (_, field) ->
-                 let val_str = get_page_attr ctx.pages p field in
+                 let val_str = get_page_attr ctx p field in
                  let cell_content =
                    if field = "title" then
                      Printf.sprintf "<a href=\"%s\">%s</a>" (page_link p) (Util.html_escape p.title)
@@ -319,7 +376,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
         if !group_by_field <> "" then begin
           let render_val v =
             let slug = Util.sanitize v in
-            match List.find_opt (fun (tp : Page.page) -> tp.name = slug) ctx.pages with
+            match Hashtbl.find_opt ctx.page_index slug with
             | Some _ -> Printf.sprintf {|<a href="/%s" class="local">%s</a>|} slug (Util.html_escape v)
             | None -> Util.html_escape v
           in
@@ -368,7 +425,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
               let header =
                 Printf.sprintf
                 {|<tr><td colspan="%d" class="year-group">%s</td></tr>|}
-                  ncols (format_date_links yr)
+                  ncols (format_date_links ctx.page_index yr)
               in
               header :: List.map make_row pages)
             grouped_sorted
@@ -391,7 +448,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
         in
         let tag_label tag =
           let slug = Util.sanitize tag in
-          match List.find_opt (fun (tp : Page.page) -> tp.name = slug) ctx.pages with
+          match Hashtbl.find_opt ctx.page_index slug with
           | Some _ -> Printf.sprintf {|<a href="/%s" class="local">%s</a>|} slug (Util.html_escape tag)
           | None -> Util.html_escape tag
         in
@@ -408,13 +465,14 @@ let render_query_ (ctx : context) (args : sexp list) : string =
         in
         String.concat "" (List.map
           (fun (tag, pages_with_tag) ->
-            let slug = Util.sanitize tag in
-            let counters = Heading.update_counters !current_heading_counters 2 in
-            current_heading_counters := counters;
-            let num_str = Heading.format_counter counters in
-            let idx = !current_toc_index in
-            current_toc_index := idx + 1;
-            dynamic_headings := !dynamic_headings @ [{
+            (* heading id uses the single heading-slug function; page links
+               (tag_label above) keep the page-name slug *)
+            let slug = Heading.slugify tag in
+            ctx.hstate.counters <- Heading.update_counters ctx.hstate.counters 2;
+            let num_str = Heading.format_counter ctx.hstate.counters in
+            let idx = ctx.hstate.toc_index in
+            ctx.hstate.toc_index <- idx + 1;
+            ctx.hstate.dynamic_headings <- ctx.hstate.dynamic_headings @ [{
               Heading.level = 2; title = tag; slug;
               number_str = num_str ^ " " ^ tag;
             }];
@@ -459,11 +517,30 @@ let render_toc (headings : Heading.heading list) : string =
   in
   "<ul class=\"toc\">\n" ^ String.concat "" items ^ "</ul>"
 
+(* does [text] contain a link reference to /name?  Pages link as
+   [label](/name) or bare /name; the character after the match must not
+   be a slug char so /name does not count /name-foo as a backlink. *)
+let references_name (text : string) (name : string) : bool =
+  let needle = "/" ^ name in
+  let nn = String.length needle and n = String.length text in
+  let slug_char c =
+    (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c = '-'
+  in
+  let rec loop i =
+    if i + nn > n then false
+    else if String.sub text i nn = needle
+            && (i + nn = n || not (slug_char text.[i + nn]))
+    then true
+    else loop (i + 1)
+  in
+  loop 0
+
 let render_backlinks_ (ctx : context) : string =
-  let target = ctx.current.name ^ ".md" in
   let refs =
     List.filter
-      (fun p -> p.Page.name <> ctx.current.name && Util.contains_substring p.raw target)
+      (fun p ->
+        p.Page.name <> ctx.current.name
+        && references_name p.Page.raw ctx.current.name)
       ctx.pages
   in
   match refs with
@@ -496,17 +573,25 @@ let rec eval (ctx : context) (sx : sexp) : string =
 
 and eval_call (ctx : context) (op : string) (args : sexp list) : string =
   match (op, args) with
-  | "nav", _ -> "<nav>" ^ render_navbar ctx ^ "</nav>"
+  | "nav", _ ->
+      if ctx.collect_only then ""
+      else "<nav>" ^ render_navbar ctx ^ "</nav>"
 
   | "list-pages", Atom substr :: _ ->
-      render_query ctx [
-        List [Atom "where"; List [Atom "contains"; Atom "title"; Atom substr]];
-        List [Atom "format"; Atom "list"];
-      ]
+      if ctx.collect_only then ""
+      else
+        render_query ctx [
+          List [Atom "where"; List [Atom "contains"; Atom "title"; Atom substr]];
+          List [Atom "format"; Atom "list"];
+        ]
 
-  | "toc", _ -> render_toc (ctx.headings @ !dynamic_headings)
+  | "toc", _ ->
+      if ctx.collect_only then ""
+      else render_toc (ctx.headings @ ctx.hstate.dynamic_headings)
 
-  | "backlinks", _ -> render_backlinks ctx
+  | "backlinks", _ ->
+      if ctx.collect_only then ""
+      else render_backlinks ctx
 
   | "site-name", _ -> ""
 
@@ -522,11 +607,13 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
       | _ :: _ :: Atom h :: _ when h <> "" -> Printf.sprintf " height=\"%s\"" (Util.html_escape h)
       | _ -> ""
     in
-    Printf.sprintf "<img src=\"%s\" alt=\"%s\"%s%s>" url (Util.html_escape alt) width_attr height_attr
+    Printf.sprintf "<img src=\"%s\" alt=\"%s\"%s%s>"
+      (Util.html_escape url) (Util.html_escape alt) width_attr height_attr
 
   | "link", Atom target :: rest ->
       let label = match rest with Atom l :: _ -> l | _ -> target in
-      Printf.sprintf "<a href=\"/%s.html\">%s</a>" target (Util.html_escape label)
+      Printf.sprintf "<a href=\"/%s.html\">%s</a>"
+        (Util.html_escape target) (Util.html_escape label)
 
   | "table", rows ->
       let ncols =
@@ -590,7 +677,9 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
 
   | "query", args -> render_query ctx args
 
-  | "map", args -> Roughmap.render ctx.map_cache_dir args
+  | "map", args ->
+      if ctx.collect_only then ""
+      else Roughmap.render ctx.map_cache_dir args
 
   | "meta", _ -> ""
 
@@ -599,7 +688,7 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
   | "location", vals ->
       let render_val v =
         let slug = Util.sanitize v in
-        match List.find_opt (fun (tp : Page.page) -> tp.name = slug) ctx.pages with
+        match Hashtbl.find_opt ctx.page_index slug with
         | Some _ -> Printf.sprintf {|<a href="/%s" class="local">%s</a>|} slug (Util.html_escape v)
         | None -> Util.html_escape v
       in
@@ -633,7 +722,8 @@ and render_line (ctx : context) (line : string) : string =
                   (close_paren - close_bracket - 2)
               in
               Buffer.add_string buf
-                (Printf.sprintf "<img src=\"%s\" alt=\"%s\">" url (Util.html_escape alt));
+                (Printf.sprintf "<img src=\"%s\" alt=\"%s\">"
+                   (Util.html_escape url) (Util.html_escape alt));
               i := close_paren + 1
           | None ->
               Buffer.add_char buf c;
@@ -656,7 +746,8 @@ and render_line (ctx : context) (line : string) : string =
                   (close_paren - close_bracket - 2)
               in
               Buffer.add_string buf
-                (Printf.sprintf "<a href=\"%s\">%s</a>" url (Util.html_escape text));
+                (Printf.sprintf "<a href=\"%s\">%s</a>"
+                   (Util.html_escape url) (Util.html_escape text));
               i := close_paren + 1
           | None ->
               Buffer.add_char buf c;
@@ -716,17 +807,23 @@ and render_line (ctx : context) (line : string) : string =
   done;
   Buffer.contents buf
 
-let parse_multiline_sexp (first_line : string) (rest_lines : string list) : sexp * string list =
+(* Returns [None] when no balanced s-expression can be read even by
+   absorbing lines to EOF (unbalanced '('); the caller must then render
+   the lines as regular text instead of one giant escaped blob. *)
+let parse_multiline_sexp (first_line : string) (rest_lines : string list)
+    : sexp option * string list =
   let rec loop current_str lines =
     match parse_sexp_at current_str 0 with
-    | sexp, _ -> (sexp, lines)
+    | sexp, _ -> (Some sexp, lines)
     | exception Parse_error _ ->
-        match lines with
-        | [] -> (Atom current_str, [])
-        | next_line :: remaining ->
-            loop (current_str ^ "\n" ^ next_line) remaining
+        (match lines with
+         | [] -> (None, [])
+         | next_line :: remaining ->
+             loop (current_str ^ "\n" ^ next_line) remaining)
   in
-  loop first_line rest_lines
+  match loop first_line rest_lines with
+  | (None, _) -> (None, rest_lines)
+  | parsed -> parsed
 
 type block = Text of string | Code of string
 
@@ -756,16 +853,12 @@ type render_state = {
   buf : Buffer.t;
   mutable in_para : bool;
   mutable list_stack : (int * bool) list;  (* indent, is_ordered *)
-  mutable heading_counters : int list;
-  mutable toc_index : int;
 }
 
 let create_state (capacity : int) : render_state = {
   buf = Buffer.create capacity;
   in_para = false;
   list_stack = [];
-  heading_counters = [];
-  toc_index = 0;
 }
 
 let close_para st =
@@ -791,25 +884,18 @@ let close_lists_to st target_indent =
 
 let close_all_lists st = close_lists_to st (-1)
 
-let render_heading st line =
+(* Renders a heading already validated by Heading.parse_heading, so the
+   body and the TOC (Heading.collect_headings) agree on what counts as a
+   heading.  Numbering/toc-index are threaded through ctx.hstate, shared
+   with the dynamic (group tag) headings emitted by queries. *)
+let render_heading st (ctx : context) level title =
   close_para st;
   close_all_lists st;
-  let level =
-    let rec count i =
-      if i < String.length line && line.[i] = '#'
-      then count (i + 1)
-      else i
-    in
-    count 0
-  in
-  let title = String.trim (String.sub line level (String.length line - level)) in
-  st.heading_counters <- Heading.update_counters st.heading_counters level;
-  current_heading_counters := st.heading_counters;
-  let num_str = Heading.format_counter st.heading_counters in
+  ctx.hstate.counters <- Heading.update_counters ctx.hstate.counters level;
+  let num_str = Heading.format_counter ctx.hstate.counters in
   let id = Heading.slugify title in
-  let idx = st.toc_index in
-  st.toc_index <- idx + 1;
-  current_toc_index := st.toc_index;
+  let idx = ctx.hstate.toc_index in
+  ctx.hstate.toc_index <- idx + 1;
   Printf.bprintf st.buf
     {|<h%d id="%s" style="--is: --h-%d"><a href="#%s">%s %s</a></h%d>|}
     level id idx id num_str (Util.html_escape title) level
@@ -856,12 +942,20 @@ let render_text_block st (ctx : context) (text : string) =
     | raw_line :: rest ->
         let line = String.trim raw_line in
         if String.length line > 0 && line.[0] = '(' then (
-          close_para st;
-          close_all_lists st;
-          let sexp, remaining_lines = parse_multiline_sexp raw_line rest in
-          Buffer.add_string st.buf (eval ctx sexp);
-          Buffer.add_char st.buf '\n';
-          process_lines remaining_lines)
+          match parse_multiline_sexp raw_line rest with
+          | Some sexp, remaining_lines ->
+              close_para st;
+              close_all_lists st;
+              Buffer.add_string st.buf (eval ctx sexp);
+              Buffer.add_char st.buf '\n';
+              process_lines remaining_lines
+          | None, remaining_lines ->
+              (* unbalanced '(': render the line as plain text rather than
+                 swallowing the rest of the page into one escaped blob *)
+              open_para st;
+              Buffer.add_string st.buf (render_line ctx line);
+              Buffer.add_char st.buf '\n';
+              process_lines remaining_lines)
         else if Util.starts_with ~prefix:"<svg" line then (
           close_para st;
           close_all_lists st;
@@ -914,12 +1008,15 @@ let render_text_block st (ctx : context) (text : string) =
               else if Util.starts_with ~prefix:"------" line || line = "---" then (
                 close_para st;
                 Buffer.add_string st.buf "<hr>\n")
-              else if Util.starts_with ~prefix:"#" line then
-                render_heading st line
               else (
-                open_para st;
-                Buffer.add_string st.buf (render_line ctx line);
-                Buffer.add_char st.buf '\n');
+                match Heading.parse_heading line with
+                | Some (level, title) -> render_heading st ctx level title
+                | None -> (
+                    (* includes '#'-lines that are no valid headings (no
+                       space after '#', level > 5): plain paragraph text *)
+                    open_para st;
+                    Buffer.add_string st.buf (render_line ctx line);
+                    Buffer.add_char st.buf '\n'));
               process_lines rest
   in
   process_lines (String.split_on_char '\n' text)
@@ -935,16 +1032,6 @@ let render_body (ctx : context) (raw : string) : string =
   close_para st;
   close_all_lists st;
   Buffer.contents st.buf
-
-let heading_to_html (buf : Buffer.t) (ctx : context) (level : int) (line : string) : unit =
-  let text = String.trim (Util.drop_prefix ~prefix:(String.make level '#') line) in
-  let slug = Util.sanitize text in
-  Buffer.add_string buf
-    (Printf.sprintf
-      {|<h%d id="%s"><a href="#%s">%s</a></h%d>n|}
-      level slug slug
-      (render_line ctx text)
-      level)
 
 let render_html (site_name : string) (ctx : context) (body : string) : string =
   let scope_style =

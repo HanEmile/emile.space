@@ -74,14 +74,7 @@ let parse_sexp_at (s : string) (start : int) : sexp * int =
   let result = read () in
   (result, !pos)
 
-let find_sexps_in_line (line : string) : (int * int * sexp) list =
-  let len = String.length line in
-  let rec scan i acc =
-    if i >= len then List.rev acc
-    else if line.[i] = '(' then
-      match parse_sexp_at line i with
-      | sexp, next -> scan next ((i, next, sexp) :: acc)
-      | exception Parse_error _ -> scan (i + 1) acc
-    else scan (i + 1) acc
-  in
-  scan 0 []
+(* escape s for embedding in a "..." string literal of an s-expression
+   (used when generating (query ...)/(map ...) sources) *)
+let escaped_str (s : string) : string =
+  String.concat "\\\"" (String.split_on_char '"' s)

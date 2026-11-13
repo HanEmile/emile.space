@@ -142,7 +142,7 @@ let parse_attrs (raw : string) : (string * string list) list =
           attrs := location_attrs vals @ !attrs;
           pos := next_pos
       | _, next_pos -> pos := next_pos
-      | exception _ -> incr pos)
+      | exception Parse_error _ -> incr pos)
     else
       incr pos
   done;

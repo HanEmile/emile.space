@@ -17,6 +17,10 @@ let enumerate_date_range (start_str : string) (end_str : string) : string list =
   in
   match parse start_str, parse end_str with
   | Some s, Some e ->
+      if s > e then
+        Printf.eprintf
+          "[!] date range %s..%s is reversed, no dates generated\n%!" start_str
+          end_str;
       let acc = ref [] and cur = ref s and fuel = ref 1000 in
       while !cur <= e && !fuel > 0 do
         let (y, m, d) = !cur in
@@ -24,6 +28,10 @@ let enumerate_date_range (start_str : string) (end_str : string) : string list =
         cur := next_day !cur;
         decr fuel
       done;
+      if !fuel = 0 && !cur <= e then
+        Printf.eprintf
+          "[!] date range %s..%s exceeds 1000 days, truncated\n%!"
+          start_str end_str;
       List.rev !acc
   | _ -> []
 
@@ -94,44 +102,17 @@ let generate_tag_pages (pages : Page.page list) : Page.page list =
   let umbrella = make_umbrella_page "tag" (pages @ individual) in
   individual @ Option.to_list umbrella
 
-let generate_value_pages (attr : string) (pages : Page.page list) : Page.page list =
-  let values =
-    pages
-    |> List.concat_map (fun (p : Page.page) ->
-           match List.assoc_opt attr p.Page.attrs with
-           | Some vals -> vals
-           | None -> [])
-    |> List.sort_uniq String.compare
-  in
-  let individual = List.filter_map
-    (fun value ->
-      let slug = Util.sanitize value in
-      if slug = "" then None
-      else if List.exists (fun (p : Page.page) -> p.name = slug) pages then None
-      else
-        let escaped = String.concat "\\\"" (String.split_on_char '"' value) in
-        let raw =
-          Printf.sprintf
-            {|# %s
+(* small (map ...) snippets for generated location pages *)
+let map_marker lat lon label =
+  Printf.sprintf "(marker %.5f %.5f \"%s\")" lat lon
+    (Sexp.escaped_str label)
 
-            (query
-              (where (has "%s" "%s"))
-              (sort "published" desc)
-              (group year "published" desc)
-              (cols ("Title" "title") ("Published" "published"))
-              (format table))|}
-            value attr escaped
-        in
-        Some ({
-          Page.name = slug;
-          title = value;
-          attrs = [("tag", [attr])];
-          raw;
-        } : Page.page))
-    values
-  in
-  let umbrella = make_umbrella_page attr (pages @ individual) in
-  individual @ Option.to_list umbrella
+let center_map_block lat lon label =
+  Printf.sprintf "(map (center %.5f %.5f 40) %s)\n\n" lat lon
+    (map_marker lat lon label)
+
+let country_map_block country inner =
+  Printf.sprintf "(map (country \"%s\")%s)\n\n" (Sexp.escaped_str country) inner
 
 let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
     : Page.page list =
@@ -165,7 +146,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
       if slug = "" then None
       else if List.exists (fun (p : Page.page) -> p.name = slug) pages then None
       else
-        let escaped = String.concat "\\\"" (String.split_on_char '"' city) in
+        let escaped = Sexp.escaped_str city in
         (* Show the country in the info bar; excluded from country listings *)
         let attrs =
           match country_opt with
@@ -182,9 +163,6 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
           match country_opt with
           | Some country when Roughmap.country_available map_cache_dir country ->
             (
-              let escaped_country =
-                String.concat "\\\"" (String.split_on_char '"' country)
-              in
               match Roughmap.city_coord map_cache_dir city with
               | Some (lat, lon) ->
                   let in_country =
@@ -195,21 +173,13 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
                     | None -> false
                   in
                   if in_country then
-                    Printf.sprintf
-                      "(map (country \"%s\") (marker %.5f %.5f \"%s\"))\n\n"
-                      escaped_country lat lon escaped
+                    country_map_block country (" " ^ map_marker lat lon city)
                     ^
                     if Roughmap.country_outline_detailed map_cache_dir country
-                    then
-                      Printf.sprintf
-                        "(map (center %.5f %.5f 40) (marker %.5f %.5f \
-                         \"%s\"))\n\n"
-                        lat lon lat lon escaped
+                    then center_map_block lat lon city
                     else ""
                   else
-                    Printf.sprintf
-                      "(map (center %.5f %.5f 40) (marker %.5f %.5f \"%s\"))\n\n"
-                      lat lon lat lon escaped
+                    center_map_block lat lon city
               | None -> "")
           | _ -> ""
         in
@@ -242,7 +212,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
       else if List.exists (fun (p : Page.page) -> p.name = slug) pages then None
       else if List.exists (fun (p : Page.page) -> p.name = slug) city_pages then None
       else
-        let escaped = String.concat "\\\"" (String.split_on_char '"' country) in
+        let escaped = Sexp.escaped_str country in
         (* country map with a marker for every city of the country that
            has known coordinates and lies inside the shown region (e.g.
            Phnom Penh and Siem Reap on the Cambodia map); cities outside
@@ -260,18 +230,12 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
                         | Some (lat, lon)
                           when lat >= r.south && lat <= r.north
                                && lon >= r.west && lon <= r.east ->
-                            let escaped_city =
-                              String.concat "\\\""
-                                (String.split_on_char '"' city)
-                            in
-                            Some
-                              (Printf.sprintf "(marker %.5f %.5f \"%s\")" lat
-                                 lon escaped_city)
+                            Some (map_marker lat lon city)
                         | _ -> None)
                     locations
               | None -> []
             in
-            Printf.sprintf "(map (country \"%s\")%s)\n\n" escaped
+            country_map_block country
               (match markers with
                | [] -> ""
                | ms -> " " ^ String.concat " " ms)
@@ -400,8 +364,12 @@ let collect_date_keys (pages : Page.page list) : string list =
 
 let generate_date_pages (pages : Page.page list) : Page.page list =
   let date_keys = collect_date_keys pages in
-  let individual = List.map
+  let individual = List.filter_map
     (fun key ->
+      if List.exists (fun (p : Page.page) -> p.name = key) pages then
+        (* a real page with this name wins, like in the other generators *)
+        None
+      else
       let name = key in
       let title = key in
       let raw =
@@ -421,7 +389,7 @@ let generate_date_pages (pages : Page.page list) : Page.page list =
             (format table))|}
           key key key
       in
-      ({
+      Some ({
         name;
         title;
         attrs = [

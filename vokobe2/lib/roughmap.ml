@@ -425,7 +425,7 @@ let city_coord cache_dir city : (float * float) option =
    regions without a richer map-cache/<region>.json. *)
 
 (* two compact global layers: world-rich.bin packs every known region's
-   rich OSM extract (build-world-rich.py, 1e-6 deg quantization, ~16 MB,
+   rich OSM extract (build-world-rich.py, 1e-4 deg quantization, ~16 MB,
    committed), world-base.bin the whole planet's coastlines/rivers/lakes
    /major roads from Natural Earth 10m (build-world-base.py, 1e-4 deg,
    ~5 MB, committed). *)

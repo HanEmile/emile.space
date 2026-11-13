@@ -5,6 +5,11 @@ type heading = {
   number_str : string;
 }
 
+(* The single heading-numbering implementation, used both when collecting
+   headings for the TOC and when rendering them in the body. [counters]
+   holds one counter per level, 1-based: updating at [level] increments
+   that level's counter, resets deeper ones and starts intermediate
+   levels at 1. *)
 let update_counters (counters : int list) (level : int) : int list =
   let rec aux curr_level acc = function
     | [] ->
@@ -24,6 +29,11 @@ let update_counters (counters : int list) (level : int) : int list =
 let format_counter (counters : int list) : string =
   String.concat "." (List.map string_of_int counters) ^ "."
 
+(* The single heading-id slug, used for both id attributes and TOC hrefs:
+   lowercase alnum/dash, each run of other characters collapses to one
+   dash, no leading/trailing dash.  For *page* name slugs use
+   Util.sanitize instead (page names are content, changing their rules
+   would rename pages and break links). *)
 let slugify (s : string) : string =
   let buf = Buffer.create (String.length s) in
   let prev_is_dash = ref true in
@@ -62,28 +72,22 @@ let parse_heading (line : string) : (int * string) option =
     Some (level, String.trim (String.sub line (level + 1) (len - level - 1)))
 
 let collect_headings (raw : string) : heading list =
-  let counters = Array.make 5 0 in
   (* Skip lines inside fenced code blocks: # comments there are not headings. *)
-  let rec aux in_code acc = function
+  let rec aux in_code counters acc = function
     | [] -> List.rev acc
     | line :: rest ->
         let trimmed = String.trim line in
         if Util.starts_with ~prefix:"```" trimmed then
-          aux (not in_code) acc rest
+          aux (not in_code) counters acc rest
         else if in_code then
-          aux in_code acc rest
+          aux in_code counters acc rest
         else
           match parse_heading line with
-          | None -> aux in_code acc rest
+          | None -> aux in_code counters acc rest
           | Some (level, title) ->
-              counters.(level - 1) <- counters.(level - 1) + 1;
-              for i = level to 4 do counters.(i) <- 0 done;
-              let number =
-                List.init level (fun i -> string_of_int counters.(i))
-                |> String.concat "."
-                |> fun s -> s ^ "."
-              in
-              aux in_code
+              let counters = update_counters counters level in
+              let number = format_counter counters in
+              aux in_code counters
                 ({
                    level;
                    title;
@@ -92,4 +96,4 @@ let collect_headings (raw : string) : heading list =
                  } :: acc)
                 rest
   in
-  aux false [] (String.split_on_char '\n' raw)
+  aux false [] [] (String.split_on_char '\n' raw)
