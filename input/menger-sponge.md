@@ -2,7 +2,7 @@
   (date "")
   (tag "blog" "origami")
   (published "2021-02-04")
-  (modified "2026-11-11")
+  (modified "2026-11-13")
   (author "Emile")
   (info "tag" "published")
 )

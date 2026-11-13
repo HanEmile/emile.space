@@ -2,7 +2,7 @@
   (date "")
   (tag "project" "vokobe")
   (published "2026-09-16")
-  (modified "2026-11-11")
+  (modified "2026-11-13")
   (author "Emile")
   (info "published" "tag"))
 

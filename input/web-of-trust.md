@@ -2,7 +2,7 @@
   (date "")
   (tag "blog")
   (published "2024-12-16")
-  (modified "2026-11-11")
+  (modified "2026-11-13")
   (author "Emile")
   (info "tag" "published")
 )

@@ -1,7 +1,7 @@
 (meta
   (tag "event" "asia" "asia-2024")
   (published "2024-11-01")
-  (modified "2026-11-10")
+  (modified "2026-11-13")
   (date "2024-11-11" "2024-11-13")
   (author "Emile")
   (info "tag" "date" "location")

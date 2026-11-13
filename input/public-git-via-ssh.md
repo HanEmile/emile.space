@@ -2,7 +2,7 @@
   (date "")
   (tag "blog" "git" "ssh")
   (published "2022-09-01")
-  (modified "2026-11-11")
+  (modified "2026-11-13")
   (author "Emile")
   (info "tag" "published")
 )
