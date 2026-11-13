@@ -6,6 +6,10 @@
         (marker LAT LON "optional label")
         ...)
 
+   (map (world)                     ; all Natural Earth country outlines
+        (marker LAT LON "optional label")
+        ...)
+
    Geometry is fetched from the Overpass API on first use and cached as raw
    JSON in a cache directory (one file per bounding box), so all later builds
    are fully local and reproducible. Rendered as inline SVG. *)
@@ -63,6 +67,7 @@ type spec =
   ; scale : float
   ; aspect : float option
   ; country : string option
+  ; world : bool
   }
 
 (* region for (center LAT LON WIDTH_KM) specs *)
@@ -122,12 +127,14 @@ let float_of_atom = function
 let parse_spec (args : sexp list) : (spec, string) result =
   let center = ref None in
   let country = ref None in
+  let world = ref false in
   let aspect = ref None in (* width / height of the rendered map *)
   let scale = ref 1. in
   let markers = ref [] in
   let error = ref None in
   List.iter
     (function
+      | List [ Atom "world" ] -> world := true
       | List [ Atom "center"; clat; clon; cwidth ] -> (
           match
             ( float_of_atom clat,
@@ -175,12 +182,25 @@ let parse_spec (args : sexp list) : (spec, string) result =
   match !error with
   | Some e -> Error e
   | None -> (
-      match (!center, !country) with
-      | Some _, Some _ -> Error "country and center are mutually exclusive"
-      | None, None ->
-          Error "map is missing a (center LAT LON WIDTH_KM) or (country NAME) \
-                 directive"
-      | Some (lat, lon, w_km), None -> (
+      match (!center, !country, !world) with
+      | Some _, _, true | _, Some _, true ->
+          Error "world is mutually exclusive with center and country"
+      | Some _, Some _, false ->
+          Error "country and center are mutually exclusive"
+      | None, None, false ->
+          Error "map is missing a (center LAT LON WIDTH_KM), (country NAME) \
+                 or (world) directive"
+      | None, None, true ->
+          Ok
+            {
+              region = None;
+              markers = List.rev !markers;
+              scale = !scale;
+              aspect = !aspect;
+              country = None;
+              world = true;
+            }
+      | Some (lat, lon, w_km), None, false -> (
           match region_of_center ~aspect:!aspect lat lon w_km with
           | Error e -> Error e
           | Ok region ->
@@ -191,8 +211,9 @@ let parse_spec (args : sexp list) : (spec, string) result =
                   scale = !scale;
                   aspect = !aspect;
                   country = None;
+                  world = false;
                 })
-      | None, Some name ->
+      | None, Some name, false ->
           Ok
             {
               region = None;
@@ -200,6 +221,7 @@ let parse_spec (args : sexp list) : (spec, string) result =
               scale = !scale;
               aspect = !aspect;
               country = Some name;
+              world = false;
             })
 
 (* -- precomputed geodata (no network) ------------------------------------
@@ -295,6 +317,25 @@ let outline_of_name (outlines : Json.t option) name : (region * geom list) optio
       | None -> None)
   | None -> None
 
+(* the unfiltered ring set + bbox of a country (far-away parts like
+   Rhodes east of mainland Greece or Alaska), when stored *)
+let world_outline_of_name (outlines : Json.t option) name :
+    (region * geom list) option =
+  match outlines with
+  | Some o -> (
+      match Json.member name o with
+      | Some e -> (
+          match
+            ( Json.member "world_bbox" e,
+              Option.map geom_of_rings (Json.member "world_rings" e) )
+          with
+          | Some (Json.Arr [ Json.Num s; Json.Num w; Json.Num n; Json.Num e' ]),
+            Some rings when rings <> [] ->
+              Some ({ south = s; west = w; north = n; east = e' }, rings)
+          | _ -> None)
+      | None -> None)
+  | None -> None
+
 (* fallback centre for country-attr values that are not countries
    (islands, city-states too small for Natural Earth 50m) *)
 let place_country_center (places : Json.t option) name :
@@ -341,6 +382,16 @@ let country_region cache_dir country : region option =
           | Error _ -> None)
       | None -> None)
 
+(* used by Generator: the region covering ALL of a country's rings
+   (including far-away parts) when stored; else the same as
+   country_region *)
+let country_region_full cache_dir country : region option =
+  let places, outlines = geodata cache_dir in
+  let cname = places_alias places country in
+  match world_outline_of_name outlines cname with
+  | Some (r, _) -> Some (pad_region country_pad r)
+  | None -> country_region cache_dir country
+
 (* used by Generator: is the country's outline detailed enough that its
    map is a pure outline (vs. already a local Overpass map)?  city pages
    of outlined countries get an additional local map of the city *)
@@ -367,6 +418,89 @@ let city_coord cache_dir city : (float * float) option =
       | None -> None)
   | None -> None
 
+(* -- global base layer (Natural Earth 10m, compact binary) -----------
+   map-cache/world-base.bin: all coastlines, rivers, lakes and major
+   roads of the planet, varint-delta-encoded at 1e-4 deg quantization
+   (see build-world-base.py).  Offline, network-free fallback for
+   regions without a richer map-cache/<region>.json. *)
+
+(* two compact global layers: world-rich.bin packs every known region's
+   rich OSM extract (build-world-rich.py, 1e-6 deg quantization, ~16 MB,
+   committed), world-base.bin the whole planet's coastlines/rivers/lakes
+   /major roads from Natural Earth 10m (build-world-base.py, 1e-4 deg,
+   ~5 MB, committed). *)
+let world_rich_file = ("world-rich.bin", "VOKWR001", 1e-4)
+let world_base_file = ("world-base.bin", "VOKWB001", 1e-4)
+
+let world_bin_available cache_dir (file, _, _) =
+  Sys.file_exists (Filename.concat cache_dir file)
+
+let read_varint (s : string) (pos : int ref) : int =
+  let rec loop shift acc =
+    let b = Char.code s.[!pos] in
+    incr pos;
+    let acc = acc lor ((b land 0x7f) lsl shift) in
+    if b land 0x80 <> 0 then loop (shift + 7) acc else acc
+  in
+  loop 0 0
+
+let zigzag n = (n lsr 1) lxor (- (n land 1))
+
+(* (class, south, west, north, east, geom) *)
+type wb_feature = int * float * float * float * float * geom
+
+let world_bin_cache : (string, wb_feature array) Hashtbl.t =
+  Hashtbl.create 2
+
+let world_bin_all cache_dir (file, magic, quant) : wb_feature array =
+  match Hashtbl.find_opt world_bin_cache file with
+  | Some v -> v
+  | None ->
+      let v =
+        let path = Filename.concat cache_dir file in
+        if not (Sys.file_exists path) then [||]
+        else
+          let s = Util.read_file path in
+          if String.length s < 9 || String.sub s 0 8 <> magic then [||]
+          else begin
+            let pos = ref 8 in
+            let n = read_varint s pos in
+            Array.init n (fun _ ->
+                let cls = Char.code s.[!pos] in
+                incr pos;
+                let npts = read_varint s pos in
+                let x = ref (zigzag (read_varint s pos)) in
+                let y = ref (zigzag (read_varint s pos)) in
+                let south = ref !y and west = ref !x in
+                let north = ref !y and east = ref !x in
+                let pts_rev = ref [ (!x, !y) ] in
+                for _ = 2 to npts do
+                  x := !x + zigzag (read_varint s pos);
+                  y := !y + zigzag (read_varint s pos);
+                  pts_rev := (!x, !y) :: !pts_rev;
+                  south := min !south !y;
+                  west := min !west !x;
+                  north := max !north !y;
+                  east := max !east !x
+                done;
+                let q v = Float.of_int v *. quant in
+                ( cls,
+                  q !south,
+                  q !west,
+                  q !north,
+                  q !east,
+                  List.rev_map (fun (x, y) -> (q x, q y)) !pts_rev ))
+          end
+      in
+      Hashtbl.replace world_bin_cache file v;
+      v
+
+let world_base_available cache_dir =
+  world_bin_available cache_dir world_base_file
+
+let world_rich_available cache_dir =
+  world_bin_available cache_dir world_rich_file
+
 (* -- Overpass fetching + caching -------------------------------------- *)
 
 let cache_filename (r : region) : string =
@@ -382,6 +516,7 @@ let overpass_query (r : region) : string =
   way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary)$"](%s);
   way["waterway"~"^(%s)$"](%s);
   way["natural"="water"](%s);
+  way["natural"="coastline"](%s);
   way["landuse"="reservoir"](%s);
   relation["natural"="water"](%s);
   relation["landuse"="reservoir"](%s);
@@ -390,7 +525,7 @@ out geom;
 |}
     bbox
     (if small then "river|canal|stream" else "river|canal")
-    bbox bbox bbox bbox bbox
+    bbox bbox bbox bbox bbox bbox
 
 (* Run curl; returns true on success (file exists and looks like JSON).
    A custom UA is required: some instances reject default client agents. *)
@@ -442,6 +577,11 @@ let load_region_json (cache_dir : string) (r : region) : (string, string) result
     Error
       "offline build: not fetching map data (map appears the next time the \
        site is built with internet access)"
+  else if world_base_available cache_dir || world_rich_available cache_dir then
+    (* the committed binary layers cover the whole planet offline; live
+       Overpass fetches are never needed (rich data comes from local
+       extracts via extract-map-cache.py) *)
+    Error "no locally cached region data (rendering packed world layers)"
   else begin
     Util.ensure_dir cache_dir;
     Printf.printf
@@ -480,6 +620,26 @@ type feature =
   | Water_line of geom
   | Road of string * geom (* highway class, geometry *)
   | Outline of geom (* country border ring *)
+  | Coast_line of geom (* open shoreline segments *)
+
+(* bin-layer features intersecting a region *)
+let world_bin_features cache_dir which (r : region) : feature list option =
+  if not (world_bin_available cache_dir which) then None
+  else
+    Some
+      (Array.fold_left
+         (fun acc (cls, s, w, n, e, g) ->
+           if e < r.west || w > r.east || n < r.south || s > r.north then acc
+           else
+             (match cls with
+              | 1 -> Coast_line g
+              | 2 -> Water_line g
+              | 3 -> Water_fill [ g ]
+              | 4 -> Road ("trunk", g)
+              | 5 -> Road ("primary", g)
+              | _ -> Road ("secondary", g))
+             :: acc)
+         [] (world_bin_all cache_dir which))
 
 let tags_of (el : Json.t) : (string * string) list =
   match Json.member "tags" el with
@@ -559,6 +719,7 @@ let feature_of_element (el : Json.t) : feature list =
           let landuse = tag "landuse" in
           if highway <> "" then [ Road (highway, geom) ]
           else if waterway <> "" then [ Water_line geom ]
+          else if natural = "coastline" then [ Coast_line geom ]
           else if natural = "water" || landuse = "reservoir" then
             [ Water_fill [ geom ] ]
           else [])
@@ -664,6 +825,30 @@ let tick_values step lo hi =
 let fmt_coord ?(dec = 5) v pos neg =
   Printf.sprintf "%.*f°%c" dec (Float.abs v) (if v >= 0. then pos else neg)
 
+(* every country outline within a fixed world frame (no Antarctica;
+   countries missing from Natural Earth are just absent) *)
+let world_region = { south = -60.; west = -180.; north = 85.; east = 180. }
+
+let world_geometries cache_dir : feature list option =
+  let _, outlines = geodata cache_dir in
+  match outlines with
+  | Some (Json.Obj kvs) ->
+      Some
+        (List.concat_map
+           (fun (_, el) ->
+             (* the unfiltered world ring set (Alaska, Svalbard, French
+                Guiana, ...) when present, else the mainland-focused one *)
+             let ring_set =
+               match Json.member "world_rings" el with
+               | Some rings -> Some rings
+               | None -> Json.member "rings" el
+             in
+             match ring_set with
+             | Some rings -> List.map (fun g -> Outline g) (geom_of_rings rings)
+             | None -> [])
+           kvs)
+  | _ -> None
+
 let features_of_json (json_text : string) : (feature list, string) result =
   match (try Ok (Json.parse json_text) with Json.Error e -> Error e) with
   | Error e -> Error ("failed to parse map data: " ^ e)
@@ -684,7 +869,7 @@ let feature_cache : (string, (feature list, string) result) Hashtbl.t =
 (* on-disk parsed-feature cache: unmarshal is ~10x faster than parsing
    the multi-MB Overpass JSON.  Bump the magic whenever the feature
    type layout changes; stale/corrupt bins are silently rebuilt. *)
-let bin_magic = "VOKOBE-FEATURES-1"
+let bin_magic = "VOKOBE-FEATURES-2"
 
 let read_bin path : feature list option =
   try
@@ -717,7 +902,7 @@ let region_features (cache_dir : string) (r : region) :
       let bin = path ^ ".bin" in
       let v =
         match
-          if Sys.file_exists bin then (
+          if Sys.file_exists bin && Sys.file_exists path then (
             let fresh =
               (Unix.stat bin).st_mtime >= (Unix.stat path).st_mtime
             in
@@ -737,6 +922,17 @@ let region_features (cache_dir : string) (r : region) :
       in
       Hashtbl.replace feature_cache key v;
       v
+
+(* one placed map label, ready to emit *)
+type placement = {
+  p_label_sz : float;
+  p_anchor : string;
+  p_tx : float;
+  p_box : float * float * float * float;
+  p_leader : (float * float) option;
+  p_leader_len : float option;
+  p_big_ok : bool;
+}
 
 let render_svg (spec : spec) (r : region) (features : feature list) :
     (string, string) result =
@@ -803,6 +999,7 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
   let b_water_fill = layer () in
   let b_river = layer () in
   let b_outline = layer () in (* country borders *)
+  let b_coast = layer () in (* shorelines *)
   let b_road_hw = layer () in (* motorway/trunk *)
   let b_road_p = layer () in (* primary *)
   let b_road_s = layer () in (* secondary *)
@@ -826,6 +1023,7 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
                 path_into ~close:true b_water_fill ring)
             rings
       | Water_line g -> path_into b_river g
+      | Coast_line g -> path_into b_coast g
       | Outline g ->
           if big_enough_ring g then path_into ~close:true b_outline g
       | Road (cls, g) ->
@@ -849,6 +1047,8 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
     {|fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"|};
   emit_layer b_outline
     {|fill="none" stroke="currentColor" stroke-width="2.2"|};
+  emit_layer b_coast
+    {|fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.8"|};
   emit_layer b_river
     {|fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"|};
   emit_layer b_road_hw
@@ -863,43 +1063,271 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
     (Printf.sprintf
        {|fill="none" stroke="currentColor" stroke-width="%.1f" stroke-linecap="round" opacity="0.8"|}
        (3. *. wscale));
-  (* marker dot + label, same text size as the body; labels that would
-     leave the frame are moved to the left of the dot *)
-  let marker_r = 0.45 *. text_sz in
-  List.iter
-    (fun m ->
-      let x, y = project (m.mlon, m.mlat) in
-      add
-        (Printf.sprintf
-           "<circle cx=\"%s\" cy=\"%s\" r=\"%s\" fill=\"currentColor\"/>\n"
-           (fmt x) (fmt y) (fmt marker_r));
-      match m.mlabel with
-      | Some label ->
-          let label_w =
-            0.62 *. text_sz *. Float.of_int (String.length label)
+  (* marker dots + labels.  Labels sit on an inverted box (foreground
+     fill, page-background text via --map-bg) so they stay readable on
+     top of dense features, and are placed around their dot where they
+     neither leave the frame nor overlap other labels/dots (a label may
+     of course sit next to its own dot).  Labels default to body-text
+     size and only shrink in crowded spots where the big size finds no
+     free spot.  If no spot is free at all, the candidate overlapping
+     the least is used.  A label pushed away from its dot gets a thin
+     leader line connecting the two *)
+  let big_label_sz = 0.85 *. text_sz in
+  let small_label_sz = 0.5 *. text_sz in
+  let marker_r = 0.15 *. text_sz in
+  let sep = 0.5 *. big_label_sz in
+  let in_frame (x0, y0, x1, y1) =
+    x0 >= ml && y0 >= mt && x1 <= ml +. width && y1 <= mt +. height
+  in
+  (* dots are drawn first; remember their boxes so a label can avoid
+     every dot except its own *)
+  let dot_boxes =
+    List.map
+      (fun m ->
+        let x, y = project (m.mlon, m.mlat) in
+        add
+          (Printf.sprintf
+             "<circle cx=\"%s\" cy=\"%s\" r=\"%s\" fill=\"currentColor\"/>\n"
+             (fmt x) (fmt y) (fmt marker_r));
+        (x -. marker_r, y -. marker_r, x +. marker_r, y +. marker_r))
+      markers
+  in
+  let placed_labels : (float * float * float * float) list ref = ref [] in
+  (* how much of a candidate box collides with the obstacles, counting
+     the sep halo on both sides *)
+  let overlap_area obstacles (x0, y0, x1, y1) =
+    List.fold_left
+      (fun acc (a0, b0, a1, b1) ->
+        let ox =
+          Float.min (x1 +. sep) (a1 +. sep)
+          -. Float.max (x0 -. sep) (a0 -. sep)
+        in
+        let oy =
+          Float.min (y1 +. sep) (b1 +. sep)
+          -. Float.max (y0 -. sep) (b0 -. sep)
+        in
+        if ox > 0. && oy > 0. then acc +. (ox *. oy) else acc)
+      0. obstacles
+  in
+  (* width estimation needs glyph count; String.length counts bytes *)
+  let utf8_length s =
+    String.fold_left
+      (fun n c -> if Char.code c land 0xC0 <> 0x80 then n + 1 else n)
+      0 s
+  in
+  (* pick a spot for marker i's label, registering the box as an
+     obstacle for later labels.  `prefer_small` tries the small size
+     first; it's used in the second pass for labels that couldn't be
+     accommodated at full size. *)
+  let place_label ~prefer_small i m : placement option =
+    match m.mlabel with
+    | None -> None
+    | Some label ->
+        let x, y = project (m.mlon, m.mlat) in
+        let other_dots = List.filteri (fun j _ -> j <> i) dot_boxes in
+        let obstacles = other_dots @ !placed_labels in
+        let n_glyphs = utf8_length label in
+        (* candidates for one label size: (label_sz, anchor, text_x,
+           box, leader); the text baseline is put at the box's vertical
+           centre so the label sits neatly in its background rect.
+           `box` is the padded rect that gets drawn, so collision/frame
+           checks cover the actual pixels; `leader` carries the x of the
+           box edge facing the dot when the label is vertically
+           displaced *)
+        let candidates_of label_sz =
+          let tw = 0.62 *. label_sz *. Float.of_int n_glyphs in
+          let th = 1.3 *. label_sz in
+          let half = tw /. 2. in
+          let pad = 0.25 *. label_sz in
+          let gap = 0.7 *. label_sz in
+          let right ~leader dy =
+            ( label_sz,
+              "",
+              x +. gap,
+              ( x +. gap -. pad,
+                y +. dy -. (th /. 2.),
+                x +. gap +. pad +. tw,
+                y +. dy +. (th /. 2.) ),
+              (if leader then Some (x +. gap -. pad) else None) )
           in
-          (* label right of the dot; if that overflows the frame, left of
-             it (end-anchored); if that would cross the left frame edge,
-             clamp it so the label always stays fully inside *)
-          let gap = 0.9 *. text_sz in
-          let anchor, tx =
-            if x +. gap +. (0.6 *. text_sz) +. label_w <= ml +. width then
-              ("", x +. gap)
-            else
-              let lx = x -. gap in
-              if lx -. label_w >= ml then ("text-anchor=\"end\" ", lx)
-              else
-                ( "text-anchor=\"end\" ",
-                  Float.min (ml +. width) (ml +. label_w +. (0.2 *. text_sz)) )
+          let left ~leader dy =
+            ( label_sz,
+              "text-anchor=\"end\" ",
+              x -. gap,
+              ( x -. gap -. pad -. tw,
+                y +. dy -. (th /. 2.),
+                x -. gap +. pad,
+                y +. dy +. (th /. 2.) ),
+              (if leader then Some (x -. gap +. pad) else None) )
           in
+          let above () =
+            ( label_sz,
+              "text-anchor=\"middle\" ",
+              x,
+              (x -. half -. pad, y -. gap -. th, x +. half +. pad, y
+               -. gap),
+              None )
+          in
+          let below () =
+            ( label_sz,
+              "text-anchor=\"middle\" ",
+              x,
+              (x -. half -. pad, y +. gap, x +. half +. pad, y +. gap
+               +. th),
+              None )
+          in
+          [
+            right ~leader:false 0.;
+            left ~leader:false 0.;
+            above ();
+            below ();
+          ]
+          @ List.concat_map
+              (fun k ->
+                let dy = 0.45 *. th *. k in
+                [
+                  right ~leader:true (-.dy);
+                  right ~leader:true dy;
+                  left ~leader:true (-.dy);
+                  left ~leader:true dy;
+                ])
+              [ 1.; 2.; 3.; 4.; 5.; 6.; 7.; 8.; 9.; 10.; 11.; 12. ]
+        in
+        let fits (_, _, _, b, _) =
+          in_frame b && overlap_area obstacles b = 0.
+        in
+        let sizes =
+          if prefer_small then [ small_label_sz; big_label_sz ]
+          else [ big_label_sz; small_label_sz ]
+        in
+        let prefered = candidates_of (List.hd sizes) in
+        let all = List.concat_map candidates_of sizes in
+        let c, big_ok =
+          (* preferred size first; nothing free at all -> least overlap
+             of both sizes *)
+          match List.find_opt fits prefered with
+          | Some c -> (c, true)
+          | None -> (
+              match List.find_opt fits all with
+              | Some c -> (c, false)
+              | None -> (
+                  let cost (_, _, _, b, _) =
+                    (if in_frame b then 0. else 1e12)
+                    +. overlap_area other_dots b
+                    +. (8. *. overlap_area !placed_labels b)
+                  in
+                  match
+                    List.fold_left
+                      (fun best c ->
+                        match best with
+                        | None -> Some (c, cost c)
+                        | Some (_, best_cost) ->
+                            let cc = cost c in
+                            if cc < best_cost then Some (c, cc) else best)
+                      None all
+                  with
+                  | Some (c, _) -> (c, false)
+                  | None ->
+                      ( ( big_label_sz,
+                          "text-anchor=\"end\" ",
+                          x,
+                          (x, y, x, y),
+                          None ),
+                        false )))
+        in
+        let label_sz, anchor, tx, box, leader = c in
+        placed_labels := box :: !placed_labels;
+        let x0, y0, x1, y1 = box in
+        let p_leader, p_leader_len =
+          match leader with
+          | None -> (None, None)
+          | Some edge_x ->
+              let edge_y =
+                Float.min (y1 -. 1.) (Float.max (y0 +. 1.) y)
+              in
+              let vx = edge_x -. x and vy = edge_y -. y in
+              (Some (edge_x, edge_y), Some (Float.hypot vx vy))
+        in
+        Some
+          { p_label_sz = label_sz;
+            p_anchor = anchor;
+            p_tx = tx;
+            p_box = box;
+            p_leader;
+            p_leader_len;
+            p_big_ok = big_ok }
+  in
+  (* pass 1: everything tries full size first.  Labels that found no
+     free spot at full size, or were pushed far from their dot, get a
+     second chance at the small size in pass 2 so dense clusters end up
+     uniformly small while quiet areas stay large *)
+  let placements = Array.make (List.length markers) None in
+  List.iteri
+    (fun i m -> placements.(i) <- place_label ~prefer_small:false i m)
+    markers;
+  let shrink =
+    List.filter_map
+      (fun i ->
+        match placements.(i) with
+        | Some p when
+            (not p.p_big_ok)
+            || (match p.p_leader_len with
+                | Some l -> l > 1.5 *. big_label_sz
+                | None -> false) ->
+            Some i
+        | _ -> None)
+      (List.init (Array.length placements) Fun.id)
+  in
+  (if shrink <> [] then (
+     let marker_arr = Array.of_list markers in
+     placed_labels :=
+       List.filter_map
+         (fun i ->
+           if List.mem i shrink then None
+           else Option.map (fun (p : placement) -> p.p_box) placements.(i))
+         (List.init (Array.length placements) Fun.id);
+     List.iter
+       (fun i ->
+         placements.(i) <-
+           place_label ~prefer_small:true i marker_arr.(i))
+       shrink));
+  List.iteri
+    (fun i m ->
+      match m.mlabel, placements.(i) with
+      | Some label, Some p ->
+          let x, y = project (m.mlon, m.mlat) in
+          let x0, y0, x1, y1 = p.p_box in
+          let label_sz = p.p_label_sz in
+          (* leader line from the dot to the label box for displaced
+             labels, drawn before the box so the box covers its end *)
+          (match p.p_leader, p.p_leader_len with
+           | Some (edge_x, edge_y), Some len
+             when len > 1.6 *. 0.7 *. label_sz ->
+               let vx = edge_x -. x and vy = edge_y -. y in
+               add
+                   (Printf.sprintf
+                      "<path d=\"M%s %sL%s %s\" stroke=\"currentColor\" \
+                       stroke-width=\"1.5\" opacity=\"0.5\"/>\n"
+                      (fmt (x +. (vx /. len *. marker_r)))
+                      (fmt (y +. (vy /. len *. marker_r)))
+                      (fmt edge_x) (fmt edge_y))
+           | _ -> ());
+          add
+            (Printf.sprintf
+               "<rect x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\" rx=\"%s\" \
+                fill=\"currentColor\"/>\n"
+               (fmt x0) (fmt y0)
+               (fmt (x1 -. x0))
+               (fmt (y1 -. y0))
+               (fmt (0.2 *. label_sz)));
           add
             (Printf.sprintf
                "<text x=\"%s\" y=\"%s\" font-size=\"%s\" %s\
-                fill=\"currentColor\">%s</text>\n"
-               (fmt tx)
-               (fmt (y +. (0.35 *. text_sz)))
-               (fmt text_sz) anchor (svg_escape label))
-      | None -> ())
+                style=\"fill:var(--map-bg)\">%s</text>\n"
+               (fmt p.p_tx)
+               (fmt (((y0 +. y1) /. 2.) +. (0.35 *. label_sz)))
+               (fmt label_sz) p.p_anchor (svg_escape label))
+      | _ -> ())
     markers;
   (* frame + lat/lon tick marks outside the map area *)
   let frame = Buffer.create 1024 in
@@ -1014,14 +1442,27 @@ let render_ (cache_dir : string) (args : sexp list) : string =
           cls style svg (fmt_coord clat 'N' 'S') (fmt_coord clon 'E' 'W')
           width_km osm_url
   in
-  (* road/water map of a region via cached Overpass data *)
+  (* road/water map of a region via locally cached data *)
   let via_overpass spec r =
     match prof_time prof_json_t (fun () -> region_features cache_dir r) with
-    | Error e -> render_error e
+    | Error e -> (
+        (* fallback chain: packed rich regions, then the coarse global
+           base; together they cover every place on earth offline *)
+        match
+          ( world_bin_features cache_dir world_rich_file r,
+            world_bin_features cache_dir world_base_file r )
+        with
+        | Some rich, _ when rich <> [] -> finish spec r rich
+        | Some _, Some base | None, Some base -> finish spec r base
+        | None, None | Some _, None -> render_error e)
     | Ok features -> finish spec r features
   in
   match parse_spec args with
   | Error e -> render_error e
+  | Ok spec when spec.world -> (
+      match world_geometries cache_dir with
+      | Some features -> finish spec world_region features
+      | None -> render_error "no geodata for world map")
   | Ok spec -> (
       match (spec.country, spec.region) with
       | None, Some r -> via_overpass spec r
@@ -1031,6 +1472,24 @@ let render_ (cache_dir : string) (args : sexp list) : string =
           let cname = places_alias places name in
           match outline_of_name outlines cname with
           | Some (r, rings) when outline_detailed rings ->
+              (* a marker on a far-away part of the country (Rhodes east
+                 of mainland Greece) switches the map to the full ring
+                 set + region so the marker isn't silently dropped *)
+              let in_region (r : region) (m : marker) =
+                m.mlat >= r.south && m.mlat <= r.north && m.mlon >= r.west
+                && m.mlon <= r.east
+              in
+              let rings, r =
+                match world_outline_of_name outlines cname with
+                | Some (wr, wrings)
+                  when List.exists
+                         (fun m ->
+                           (not (in_region (pad_region country_pad r) m))
+                           && in_region (pad_region country_pad wr) m)
+                         spec.markers ->
+                    (wrings, wr)
+                | _ -> (rings, r)
+              in
               (* explicit aspect wins; otherwise pad wide countries to the
                  3:1 banner but keep portrait countries natural *)
               let r = pad_region country_pad r in

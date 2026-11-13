@@ -145,8 +145,22 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
            cities)
     |> List.sort_uniq compare
   in
+  (* a single-value (location "X") naming a known country means "in
+     country X", not a city without a country page *)
+  let locations =
+    List.map
+      (fun ((city, country_opt) as loc) ->
+        match country_opt with
+        | None when Roughmap.country_available map_cache_dir city ->
+            (city, Some city)
+        | _ -> loc)
+      locations
+  in
   let city_pages = List.filter_map
     (fun (city, country_opt) ->
+      (* country-only locations are handled by the country page *)
+      if country_opt = Some city then None
+      else
       let slug = Util.sanitize city in
       if slug = "" then None
       else if List.exists (fun (p : Page.page) -> p.name = slug) pages then None
@@ -174,7 +188,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
               match Roughmap.city_coord map_cache_dir city with
               | Some (lat, lon) ->
                   let in_country =
-                    match Roughmap.country_region map_cache_dir country with
+                    match Roughmap.country_region_full map_cache_dir country with
                     | Some (r : Roughmap.region) ->
                         lat >= r.south && lat <= r.north && lon >= r.west
                         && lon <= r.east
@@ -236,7 +250,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
         let map_block =
           if Roughmap.country_available map_cache_dir country then
             let markers =
-              match Roughmap.country_region map_cache_dir country with
+              match Roughmap.country_region_full map_cache_dir country with
               | Some (r : Roughmap.region) ->
                   List.filter_map
                     (fun (city, copt) ->
@@ -273,13 +287,14 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
 
 %s              (query
                 (where
-                  (and (has "country" "%s")
+                  (and (or (has "country" "%s")
+                           (has "location" "%s"))
                        (not (tag "city"))))
                 (sort "location" asc)
                 (group field "location" "country")
                 (cols ("Title" "title") ("Date" "date"))
                 (format table))|}
-            country map_block escaped;
+            country map_block escaped escaped;
         } : Page.page))
     countries
   in
@@ -287,6 +302,21 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
   let umbrella =
     if List.exists (fun (p : Page.page) -> p.name = "location") (pages @ all_generated) then None
     else begin
+      (* world map with a dot for every city that has known coordinates *)
+      let world_map_block =
+        let markers =
+          List.filter_map
+            (fun (city, _) ->
+              match Roughmap.city_coord map_cache_dir city with
+              | Some (lat, lon) ->
+                  Some (Printf.sprintf "(marker %.5f %.5f)" lat lon)
+              | None -> None)
+            locations
+        in
+        match markers with
+        | [] -> ""
+        | ms -> Printf.sprintf "(map (world) %s)\n\n" (String.concat " " ms)
+      in
       let standalone_cities =
         locations
         |> List.filter_map (fun (city, country_opt) ->
@@ -299,7 +329,8 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
           let cities_in_country =
             locations
             |> List.filter_map (fun (city, copt) ->
-                   if copt = Some country then Some city else None)
+                   if copt = Some country && city <> country then Some city
+                   else None)
             |> List.sort String.compare
           in
           let city_lines = List.map (fun city ->
@@ -316,7 +347,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
         standalone_cities
       in
       let all_lines = country_lines @ standalone_lines in
-      let raw = "# location\n\n" ^ String.concat "\n" all_lines in
+      let raw = "# location\n\n" ^ world_map_block ^ String.concat "\n" all_lines in
       Some ({
         Page.name = "location";
         title = "location";

@@ -74,13 +74,16 @@ def ring_area(ring):
         a += (x1 * clat) * y2 - (x2 * clat) * y1
     return abs(a) / 2.0
 
-# ring filtering: keep maps mainland-focused (island cities get a local
-# Overpass map instead, see Generator/roughmap).  A ring is dropped when
+# ring filtering: country maps stay mainland-focused (island cities get a
+# local Overpass map instead, see Generator/roughmap); world maps get all
+# visible parts.  A ring is dropped from the mainland set ("rings") when
 #   - it is tiny compared to the country's largest ring (specks), or
 #   - it is both far away AND small compared to it -- this drops overseas
 #     islands (Canaries, Svalbard, Alaska, French Guiana) but keeps both
 #     nearby islands (Balearics, Sicily, Hokkaido) and far-away major
 #     landmasses (Peninsular Malaysia vs Borneo, Papua for Indonesia)
+# The world set ("world_rings", only stored when different) only drops the
+# specks, so the world map shows Alaska, Svalbard, French Guiana etc.
 MIN_RING_FRAC = 0.005
 NEAR_RING_DIST_KM = 350.0
 FAR_RING_FRAC = 0.30
@@ -112,6 +115,11 @@ def round_ring(ring):
     return out
 
 def rings_of_geometry(geom):
+    """returns (mainland-focused rings, world rings).
+
+    Both drop sub-speck rings (MIN_RING_FRAC); the mainland set additionally
+    drops far-away smaller parts (Alaska, Svalbard, French Guiana) whereas
+    the world set keeps them so the world map shows everything visible."""
     polys = []
     if geom["type"] == "Polygon":
         polys = [geom["coordinates"]]
@@ -126,17 +134,31 @@ def rings_of_geometry(geom):
             if len(r) >= 4:
                 rings.append(r)
     if not rings:
-        return rings
+        return rings, rings
     main = max(rings, key=ring_area)
     main_area = ring_area(main)
+    world = [r for r in rings if ring_area(r) >= MIN_RING_FRAC * main_area]
     def keep(r):
-        a = ring_area(r)
-        if a < MIN_RING_FRAC * main_area:
-            return False
         if ring_dist_km(r, main) <= NEAR_RING_DIST_KM:
             return True
-        return a >= FAR_RING_FRAC * main_area
-    return [r for r in rings if keep(r)]
+        return ring_area(r) >= FAR_RING_FRAC * main_area
+    return [r for r in world if keep(r)], world
+
+# stamp-caching: outlines + places only depend on the Natural Earth
+# source, this script and the input pages -- a full recompute costs ~13 s
+# of RDP/ring-distance work that publishes should not pay every time
+STAMP = os.path.join(CACHE, ".geodata.stamp")
+
+def stamp_current():
+    deps = [NE_LOCAL, os.path.abspath(__file__)]
+    deps += glob.glob(os.path.join(ROOT, "input", "*.md"))
+    return max(os.path.getmtime(d) for d in deps if os.path.exists(d))
+
+stamp_mtime = os.path.getmtime(STAMP) if os.path.exists(STAMP) else 0
+if (os.path.exists(OUTLINES_OUT) and os.path.exists(PLACES_OUT)
+        and stamp_mtime >= stamp_current()):
+    print("map geodata unchanged (map-cache/.geodata.stamp)")
+    sys.exit(0)
 
 # ---------------- country outlines -------------------------------------------------
 
@@ -147,12 +169,19 @@ if not os.path.exists(NE_LOCAL):
 ne = json.load(open(NE_LOCAL))
 outlines = {}
 for f in ne["features"]:
-    p, rings = f["properties"], rings_of_geometry(f["geometry"])
+    p = f["properties"]
+    rings, world_rings = rings_of_geometry(f["geometry"])
     if not rings:
         continue
     xs = [pt[0] for r in rings for pt in r]
     ys = [pt[1] for r in rings for pt in r]
     entry = {"bbox": [min(ys), min(xs), max(ys), max(xs)], "rings": rings}
+    # only stored when different, to keep the cache compact
+    if len(world_rings) != len(rings):
+        entry["world_rings"] = world_rings
+        wxs = [pt[0] for r in world_rings for pt in r]
+        wys = [pt[1] for r in world_rings for pt in r]
+        entry["world_bbox"] = [min(wys), min(wxs), max(wys), max(wxs)]
     for key in ("NAME", "NAME_EN", "ADMIN"):
         n = p.get(key)
         if n and n not in outlines:
@@ -237,3 +266,4 @@ json.dump(places, open(PLACES_OUT, "w"), indent=1, sort_keys=True, ensure_ascii=
 print(f"{PLACES_OUT}: {len(places['cities'])} cities, "
       f"{len(places['countries'])} country fallbacks, "
       f"{len(places['unresolved'])} unresolved, {n_geo} new lookups")
+open(STAMP, "w").write("ok\n")

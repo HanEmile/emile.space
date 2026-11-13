@@ -11,10 +11,26 @@ vokobe2/_build/
 # generated API docs of the OCaml generator (ocamldoc)
 doc/
 
-# interrupted Overpass downloads (successful ones are committed on purpose)
+# interrupted Overpass downloads
 map-cache/*.tmp
 map-cache/*.query
-map-cache/*.bin
+map-cache/*.json.bin
+
+# rich per-region OSM extracts (rebuilt locally from map-cache/osm via
+# extract-map-cache.py; the packed world-rich.bin is committed instead)
+map-cache/[0-9]*.json
+map-cache/-*.json
+
+# Natural Earth 10m sources for build-world-base.py (the 5 MB
+# world-base.bin built from them IS committed)
+map-cache/ne10m/
+
+# publish-time stamps (update-map-geodata.py, map-attrs-changed.py)
+map-cache/.geodata.stamp
+map-cache/.map-attrs.stamp
+
+# local offline map dataset (download via fetch-osm-dataset.sh, ~3 GB)
+map-cache/osm/
 
 # hidden draft pages (dot-prefixed, never published to the repo)
 /input/.*.md
