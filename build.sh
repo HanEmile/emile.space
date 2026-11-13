@@ -5,14 +5,13 @@ cd "$(dirname "$0")"
 VERBOSE="${VERBOSE:-0}"
 CHECK_LINKS=1
 OFFLINE=0
-BASE_URL="http://localhost:8081"
 
 for arg in "$@"; do
   case "$arg" in
     --verbose|-v) VERBOSE=1 ;;
     --no-check)   CHECK_LINKS=0 ;;
     --offline)    OFFLINE=1 ;;
-    http*)        BASE_URL="$arg" ;;
+    http*)        : ;;  # base-URL no longer needed (checker stats output/)
   esac
 done
 
@@ -25,22 +24,20 @@ echo "[ ] building ..."
 rm -rf output/
 
 if [ "$VERBOSE" = "1" ]; then
-  nix-shell shell.nix --run \
-    "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG"
+  ./nixrun.sh "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG"
 else
-  nix-shell shell.nix --run \
-    "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG" 2>/dev/null
+  ./nixrun.sh "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG" 2>/dev/null
 fi
 
 chmod -R +r output/
 echo "[+] done"
 
 if [ "$CHECK_LINKS" = "1" ]; then
-  echo "[ ] checking links ($BASE_URL) ..."
+  echo "[ ] checking links ..."
   if [ "$VERBOSE" = "1" ]; then
-    python3 check-links.py --verbose "$BASE_URL" || true
+    python3 check-links.py --verbose || true
   else
-    python3 check-links.py "$BASE_URL" || true
+    python3 check-links.py || true
   fi
 fi
 

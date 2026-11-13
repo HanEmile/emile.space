@@ -15,9 +15,10 @@ done
 export VERBOSE  # honored by build.sh and sync.sh
 
 if [ "$PREP" = "1" ]; then
-  # data prep: one nix-shell for everything (dates, geodata, map regions).
-  # each step is internally stamped and exits in ~0 s when nothing changed.
-  nix-shell shell.nix --run '
+  # data prep: one cached-shell invocation for everything (dates, geodata,
+  # map regions).  each step is internally stamped and exits in ~0 s when
+  # nothing changed.
+  ./nixrun.sh '
 set -e
 echo "[ ] updating modified dates ..."
 python3 update-modified.py

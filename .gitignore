@@ -40,3 +40,9 @@ map-cache/osm/
 
 # ast auto-dedup experiment (tool + source copies)
 dedup-lab/
+
+# cached shell.nix environment (nixrun.sh)
+.nix-env-cache/
+
+# rendered map html cache (roughmap.ml render_cached)
+map-cache/svg-cache/
