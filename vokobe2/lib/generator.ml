@@ -525,7 +525,8 @@ let excerpt_of_raw (raw : string) : string =
 (* O(n * t + b log b + E): filter n pages by tag (t = tags/page), sort
    b = blog posts, then excerpts cost E = total raw length of the
    (at most 25) emitted items. *)
-let rss_xml ~(site_name : string) (pages : Page.page list) : string =
+let rss_xml ~(site_name : string) ~(feed_tag : string)
+    (pages : Page.page list) : string =
   let base = "https://" ^ site_name in
   let published (p : Page.page) =
     match List.assoc_opt "published" p.Page.attrs with
@@ -535,7 +536,7 @@ let rss_xml ~(site_name : string) (pages : Page.page list) : string =
   let items =
     pages
     |> List.filter (fun (p : Page.page) ->
-           List.mem "blog" (tags_of_page p) && published p <> None)
+           List.mem feed_tag (tags_of_page p) && published p <> None)
     |> List.sort (fun a b -> compare (published b) (published a))
   in
   let items =
@@ -563,7 +564,13 @@ let rss_xml ~(site_name : string) (pages : Page.page list) : string =
 <description>Recent posts on %s</description>
 <language>en</language>
 |}
-       (Util.html_escape site_name) base (Util.html_escape site_name));
+       (Util.html_escape
+          (if feed_tag = "blog" then site_name
+           else site_name ^ " — " ^ feed_tag))
+       base
+       (Util.html_escape
+          (if feed_tag = "blog" then site_name
+           else site_name ^ " — pages tagged " ^ feed_tag)));
   (match last_build with
    | Some d -> Buffer.add_string buf ("<lastBuildDate>" ^ d ^ "</lastBuildDate>\n")
    | None -> ());
@@ -952,3 +959,109 @@ let generate_search_pages (pages : Page.page list) : Page.page list =
          } : Page.page)
         :: acc)
     per_token []
+
+(* ---------------------------------------------------------------------------
+   /travel: world map with every visited country shaded and every known
+   city dotted, plus a year list per country. *)
+
+let generate_travel_page ~(map_cache_dir : string) (pages : Page.page list)
+    : Page.page option =
+  if List.exists (fun (p : Page.page) -> p.Page.name = "travel") pages
+  then None
+  else
+    let countries =
+      pages
+      |> List.concat_map (fun (p : Page.page) ->
+             match List.assoc_opt "country" p.Page.attrs with
+             | Some cs -> cs
+             | None ->
+                 (* single-value locations naming a country count too *)
+                 (match List.assoc_opt "location" p.Page.attrs with
+                  | Some [ l ] when Roughmap.country_available map_cache_dir l ->
+                      [ l ]
+                  | _ -> []))
+      |> List.sort_uniq compare
+    in
+    if countries = [] then None
+    else
+      (* year(s) of each country's pages *)
+      let years_of country =
+        pages
+        |> List.filter_map (fun (p : Page.page) ->
+               let in_country =
+                 match List.assoc_opt "country" p.Page.attrs with
+                 | Some cs -> List.mem country cs
+                 | None ->
+                     (match List.assoc_opt "location" p.Page.attrs with
+                      | Some [ l ] -> l = country
+                      | _ -> false)
+               in
+               match List.assoc_opt "date-start" p.Page.attrs, in_country with
+               | Some (d :: _), true -> Some (String.sub d 0 4)
+               | _ -> None)
+        |> List.sort_uniq compare
+      in
+      let fills =
+        String.concat " "
+          (List.map
+             (fun c -> Printf.sprintf "(fill \"%s\")" (Sexp.escaped_str c))
+             countries)
+      in
+      let markers =
+        pages
+        |> List.concat_map (fun (p : Page.page) ->
+               match List.assoc_opt "location" p.Page.attrs with
+               | Some (city :: _) -> [ city ]
+               | _ -> [])
+        |> List.sort_uniq compare
+        |> List.filter_map (fun city ->
+               match Roughmap.city_coord map_cache_dir city with
+               | Some (lat, lon) ->
+                   Some (Printf.sprintf "(marker %.5f %.5f)" lat lon)
+               | None -> None)
+      in
+      let sections =
+        List.map
+          (fun c ->
+            let years = String.concat ", " (years_of c) in
+            Printf.sprintf "- [%s](/%s)%s\n" (Sexp.escaped_str c)
+              (Util.sanitize c)
+              (if years = "" then "" else " — " ^ years))
+          countries
+      in
+      Some
+        ({
+           Page.name = "travel";
+           title = "travel";
+           attrs = [ ("tag", [ "meta" ]) ];
+           raw =
+             Printf.sprintf
+               "# travel\n\neverywhere I've been: countries shaded, cities \
+                dotted.\n\n(map (world) %s %s)\n\n## countries\n\n%s"
+               fills (String.concat " " markers) (String.concat "" sections);
+         } : Page.page)
+
+
+(* all feeds: the blog feed plus one per tag that has at least two
+   published pages.  Returns (filename, tag, xml) triples. *)
+let rss_feeds ~(site_name : string) (pages : Page.page list) :
+    (string * string * string) list =
+  let tags =
+    collect_all_tags pages
+    |> List.filter (fun t -> t <> "meta" && t <> "date" && t <> "search")
+    |> List.filter (fun t ->
+           let n =
+             List.length
+               (List.filter
+                  (fun (p : Page.page) ->
+                    List.mem t (tags_of_page p)
+                    && List.assoc_opt "published" p.Page.attrs <> None)
+                  pages)
+           in
+           n >= 2 || t = "blog")
+  in
+  List.map
+    (fun t ->
+      let file = if t = "blog" then "rss.xml" else "feed-" ^ t ^ ".xml" in
+      (file, t, rss_xml ~site_name ~feed_tag:t pages))
+    tags

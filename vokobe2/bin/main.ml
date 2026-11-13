@@ -134,7 +134,9 @@ let () =
             (tm.tm_mon + 1) tm.tm_mday
         in
         Option.to_list (Generator.generate_now_page ~today visible_pages)
-        @ Option.to_list (Generator.generate_on_this_day visible_pages))
+        @ Option.to_list (Generator.generate_on_this_day visible_pages)
+        @ Option.to_list
+            (Generator.generate_travel_page ~map_cache_dir visible_pages))
   in
   let base_pages = base_pages @ dated_pages in
   let all_visible = base_pages @ attr_pages @ search_pages in
@@ -145,6 +147,16 @@ let () =
     (List.length attr_pages)
     (List.length search_pages)
     (List.length hidden_pages);
+
+  (* RSS feeds: blog (/rss.xml) plus one per tag with >=2 published
+     pages (/feed-<tag>.xml); feed_of_page maps tag-page names to feed
+     filenames so their pages can advertise the right feed *)
+  let feed_of_page : (string, string) Hashtbl.t = Hashtbl.create 16 in
+  List.iter
+    (fun (file, tag, xml) ->
+      Util.write_file (Filename.concat output_dir file) xml;
+      Hashtbl.replace feed_of_page tag file)
+    (Generator.rss_feeds ~site_name visible_pages);
 
   (* name -> page, built once and shared by every render *)
   let page_index = Render.page_index_of all_visible in
@@ -168,6 +180,10 @@ let () =
           backlinks_op_used = false;
           book_depth = 0;
           history;
+          feed =
+            (match Hashtbl.find_opt feed_of_page page.Page.name with
+             | Some file -> Some (file, page.Page.name)
+             | None -> None);
         }
     in
     (* First pass: discover any headings emitted dynamically by queries.
@@ -234,10 +250,7 @@ let () =
   prof_time "render_all" render_pool |> ignore;
   Printf.printf "wrote %d html files\n%!" (List.length all_visible + List.length hidden_pages);
 
-  (* RSS feed of the blog posts (tag "blog"), same selection as /blog *)
-  Util.write_file
-    (Filename.concat output_dir "rss.xml")
-    (Generator.rss_xml ~site_name visible_pages);
+
   if Sys.getenv_opt "VOKOBE_PROFILE" = Some "1" then begin
     let prof = Printf.eprintf in
     prof "[prof] ------------------------\n%!";

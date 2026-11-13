@@ -68,6 +68,7 @@ type spec =
   ; aspect : float option
   ; country : string option
   ; world : bool
+  ; fills : string list (* (fill "Country") countries to shade *)
   }
 
 (* region for (center LAT LON WIDTH_KM) specs
@@ -136,10 +137,12 @@ let parse_spec (args : sexp list) : (spec, string) result =
   let aspect = ref None in (* width / height of the rendered map *)
   let scale = ref 1. in
   let markers = ref [] in
+  let fills = ref [] in
   let error = ref None in
   List.iter
     (function
       | List [ Atom "world" ] -> world := true
+      | List [ Atom "fill"; Atom name ] -> fills := name :: !fills
       | List [ Atom "center"; clat; clon; cwidth ] -> (
           match
             ( float_of_atom clat,
@@ -196,6 +199,7 @@ let parse_spec (args : sexp list) : (spec, string) result =
             aspect = !aspect;
             country;
             world;
+            fills = List.rev !fills;
           }
       in
       match (!center, !country, !world) with
@@ -624,6 +628,11 @@ type feature =
   | Road of string * geom (* highway class, geometry *)
   | Outline of geom (* country border ring *)
   | Coast_line of geom (* open shoreline segments *)
+  (* generated at render time from (fill "Country") directives; never
+     serialized.  Appended LAST on purpose: Marshal constructor indices
+     of the serialized variants above stay stable, so existing region
+     .bin caches remain valid *)
+  | Shaded of geom
 
 let world_bin_features_cache
     : (string * float * float * float * float, feature list) Hashtbl.t =
@@ -1045,6 +1054,7 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
   let b_road_hw = layer () in (* motorway/trunk *)
   let b_road_p = layer () in (* primary *)
   let b_road_s = layer () in (* secondary *)
+  let b_shaded = layer () in (* (fill ...) country shading *)
   let path_into ?(close = false) buf g =
     match decimate (List.map project g) with
     | [] -> ()
@@ -1068,6 +1078,8 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
       | Coast_line g -> path_into b_coast g
       | Outline g ->
           if big_enough_ring g then path_into ~close:true b_outline g
+      | Shaded g ->
+          if big_enough_ring g then path_into ~close:true b_shaded g
       | Road (cls, g) ->
           let buf =
             match cls with
@@ -1085,6 +1097,8 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
       Printf.bprintf parts "<path d=\"%s\" %s/>\n" (Buffer.contents buf)
         style
   in
+  (* shading first: fills sit under every line/point layer *)
+  emit_layer b_shaded {|class="shaded"|};
   emit_layer b_water_fill
     {|fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"|};
   emit_layer b_outline
@@ -1451,8 +1465,12 @@ let svg_stamp path =
 
 let render_cached cache_dir args ~deps f =
   let key =
+    (* the v2 prefix version-bumps the cache when the renderer changes
+       (e.g. new fill layer): stale entries would otherwise serve
+       pre-change svgs for unchanged inputs *)
     Digest.string
-      (sexp_key (List args) ^ String.concat ";" (List.map svg_stamp deps))
+      ("v2;" ^ sexp_key (List args)
+       ^ String.concat ";" (List.map svg_stamp deps))
     |> Digest.to_hex
   in
   let dir = Filename.concat cache_dir "svg-cache" in
@@ -1554,6 +1572,26 @@ let render (cache_dir : string) (args : sexp list) : string =
     | Ok features -> finish spec r features
   in
   (* country/world maps depend only on the two geodata files *)
+  (* resolve (fill "Country") directives into Shaded outline rings,
+     prepended so fills render under every line layer *)
+  let apply_fills (spec : spec) features =
+    if spec.fills = [] then features
+    else
+      let places, outlines = geodata cache_dir in
+      List.concat_map
+        (fun name ->
+          let cname = places_alias places name in
+          match
+            (world_outline_of_name outlines cname, outline_of_name outlines cname)
+          with
+          | Some (_, rings), _ | None, Some (_, rings) ->
+              List.map (fun g -> Shaded g) rings
+          | None, None ->
+              Printf.eprintf "[map] fill: unknown country %s\n%!" name;
+              [])
+        spec.fills
+      @ features
+  in
   let geodata_deps =
     List.map
       (Filename.concat cache_dir)
@@ -1561,7 +1599,7 @@ let render (cache_dir : string) (args : sexp list) : string =
   in
   let finish_geodata spec r fs =
     render_cached cache_dir args ~deps:geodata_deps (fun () ->
-        finish spec r fs)
+        finish spec r (apply_fills spec fs))
   in
   match parse_spec args with
   | Error e -> render_error e

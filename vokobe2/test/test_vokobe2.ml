@@ -61,6 +61,7 @@ let () =
         backlinks_op_used = false;
         book_depth = 0;
         history = Hashtbl.create 4;
+        feed = None;
       }
   in
   let contains = Vokobe2.Util.contains_substring in

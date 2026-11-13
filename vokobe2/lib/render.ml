@@ -57,6 +57,9 @@ type context = {
   (* optional git history: page name -> (created, modified, n_edits);
      empty when history.json is absent *)
   history : (string, int * int * int) Hashtbl.t;
+  (* feed filename + tag for pages carrying their own per-tag rss feed
+     (tag pages); other pages advertise only the blog feed *)
+  feed : (string * string) option;
 }
 
 let page_link (p : Page.page) : string = "/" ^ p.name
@@ -1303,6 +1306,70 @@ let render_body (ctx : context) (raw : string) : string =
 
 (* O(h + len body) plus one navbar query O(n * a); h = headings,
    n = pages, a = attrs/page.  Called once per page in the hot path. *)
+(* related pages: backlink-graph neighbors (either direction) plus a
+   bonus per shared tag; generated pages (search results, date/tag
+   indexes, ...) never appear.  The adjacency map is cached per
+   pages-list identity like the backlink index. *)
+let adjacency_cache :
+    (Page.page list * (string, (string * int) list) Hashtbl.t) option ref =
+  ref None
+
+let adjacency_of (pages : Page.page list) :
+    (string, (string * int) list) Hashtbl.t =
+  match !adjacency_cache with
+  | Some (key, adj) when key == pages -> adj
+  | _ ->
+      let adj = Hashtbl.create 256 in
+      let bump a b =
+        let l =
+          match Hashtbl.find_opt adj a with Some l -> l | None -> []
+        in
+        match List.assoc_opt b l with
+        | Some w ->
+            Hashtbl.replace adj a ((b, w + 1) :: List.remove_assoc b l)
+        | None -> Hashtbl.replace adj a ((b, 1) :: l)
+      in
+      Hashtbl.iter
+        (fun target bls ->
+          List.iter
+            (fun bl ->
+              bump bl.b_page.Page.name target;
+              bump target bl.b_page.Page.name)
+            bls)
+        (build_backlinks pages);
+      adjacency_cache := Some (pages, adj);
+      adj
+
+(* real (non-generated) pages only; O(degree). *)
+let related_of (ctx : context) : Page.page list =
+  let me = ctx.current in
+  match Hashtbl.find_opt (adjacency_of ctx.pages) me.Page.name with
+  | None -> []
+  | Some nbs ->
+      let my_tags = tags_of me in
+      nbs
+      |> List.filter_map (fun (name, w) ->
+             if name = me.Page.name then None
+             else
+               match Hashtbl.find_opt ctx.page_index name with
+               | Some p ->
+                   let gen_tags = tags_of p in
+                   if
+                     List.exists
+                       (fun t -> List.mem t [ "meta"; "date"; "search"; "city"; "location"; "tag" ])
+                       gen_tags
+                   then None
+                   else
+                     let shared =
+                       List.length
+                         (List.filter (fun t -> List.mem t my_tags) gen_tags)
+                     in
+                     Some (p, w + shared)
+               | None -> None)
+      |> List.sort (fun (_, s1) (_, s2) -> compare s2 s1)
+      |> (fun l -> List.filteri (fun i _ -> i < 3) l)
+      |> List.map fst
+
 let _ = render_body_late := render_body
 
 let render_html (site_name : string) (ctx : context) (body : string) : string =
@@ -1336,6 +1403,20 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
           (date_of created) edits (date_of modified)
     | None -> ""
   in
+  let related_html =
+    match related_of ctx with
+    | [] -> ""
+    | ps ->
+        let links =
+          List.map
+            (fun p ->
+              Printf.sprintf "<a href=\"%s\">%s</a>" (page_link p)
+                (Util.html_escape p.Page.title))
+            ps
+        in
+        "<div class=\"related\">see also: " ^ String.concat " · " links
+        ^ "</div>"
+  in
   Printf.sprintf
     {|<!DOCTYPE html>
 <html lang="en">
@@ -1345,6 +1426,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
   <title>%s</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="alternate" type="application/rss+xml" title="%s" href="/rss.xml">
+%s
 </head>
 <body>
   <header>
@@ -1353,7 +1435,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
   </header>
   <nav>%s</nav>
   %s%s  <main%s>
-%s%s  </main>
+%s%s%s  </main>
   <footer>
     <br><br><br>
     <a href="https://social.emile.space/@hanemile/feed.rss" target="_blank" rel="noopener" class="icon"><img class="webring" src="/rss.svg" alt="rss" height="32px"/></a>
@@ -1369,10 +1451,17 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
     (Util.html_escape ctx.current.title)
     (Util.html_escape site_name)
     (Util.html_escape site_name)
+    (match ctx.feed with
+     | Some (file, tag) ->
+         Printf.sprintf
+           {|<link rel="alternate" type="application/rss+xml" title="%s" href="/%s">|}
+           (Util.html_escape (site_name ^ " — " ^ tag)) file
+     | None -> "")
     (render_navbar ctx)
     (render_info_bar ctx)
     hist_html
     scope_style
     backlinks
     body
+    related_html
     (Util.html_escape site_name)
