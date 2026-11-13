@@ -778,10 +778,15 @@ let render_body_late : (context -> string -> string) ref =
   ref (fun _ _ -> "")
 
 let render_book (ctx : context) (tag : string) : string =
+  (* chronological order by event date; published date and name are the
+     tiebreak/fallback chain *)
   let date_key (p : Page.page) =
-    match List.assoc_opt "published" p.Page.attrs with
-    | Some (d :: _) -> d
-    | _ -> "9999-99-99"
+    match List.assoc_opt "date-start" p.Page.attrs with
+    | Some (d :: _) when d <> "" -> d
+    | _ -> (
+        match List.assoc_opt "published" p.Page.attrs with
+        | Some (d :: _) -> d
+        | _ -> "9999-99-99")
   in
   let chapters =
     ctx.pages
