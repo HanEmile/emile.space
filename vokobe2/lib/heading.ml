@@ -11,21 +11,12 @@ type heading = {
    that level's counter, resets deeper ones and starts intermediate
    levels at 1.
    Complexity: O(level). *)
-let update_counters (counters : int list) (level : int) : int list =
-  let rec aux curr_level acc = function
-    | [] ->
-        if curr_level <= level then
-          aux (curr_level + 1) (1 :: acc) []
-        else List.rev acc
-    | hd :: tl ->
-        if curr_level = level then
-          List.rev ((hd + 1) :: acc)
-        else if curr_level < level then
-          aux (curr_level + 1) (hd :: acc) tl
-        else
-          List.rev acc
-  in
-  aux 1 [] counters
+let rec update_counters (counters : int list) (level : int) : int list =
+  match counters with
+  | [] -> if level >= 1 then 1 :: update_counters [] (level - 1) else []
+  | hd :: tl ->
+      if level = 1 then [hd + 1]
+      else hd :: update_counters tl (level - 1)
 
 (* O(h); h = heading depth levels (at most 5). *)
 let format_counter (counters : int list) : string =
@@ -82,7 +73,7 @@ let collect_headings (raw : string) : heading list =
     | [] -> List.rev acc
     | line :: rest ->
         let trimmed = String.trim line in
-        if Util.starts_with ~prefix:"```" trimmed then
+        if String.starts_with ~prefix:"```" trimmed then
           aux (not in_code) counters acc rest
         else if in_code then
           aux in_code counters acc rest

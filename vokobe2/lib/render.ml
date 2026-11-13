@@ -153,11 +153,11 @@ let get_page_attr (ctx : context) (p : Page.page) (key : string) : string =
   | "date" ->
       range
         (match first_attr p "date-start" with
-         | Some _ as found -> found
          | None -> (
              match first_attr p "published" with
-             | Some _ as found -> found
-             | None -> first_attr p "date"))
+             | None -> first_attr p "date"
+             | found -> found)
+         | found -> found)
   | "date-end" -> single "date-end"
   | "tag" | "tags" ->
       tags_of p
@@ -197,12 +197,11 @@ let get_page_attr_raw (p : Page.page) (key : string) : string =
   | "name" -> p.name
   | "link" -> p.name
   | "date" ->
-      let v = lookup "date-start" in
-      if v <> "" then v
-      else
-        let v = lookup "published" in
-        if v <> "" then v
-        else lookup "date"
+      (* first non-empty of the fallback chain *)
+      [ "date-start"; "published"; "date" ]
+      |> List.filter_map (first_attr p)
+      |> List.find_opt (fun v -> v <> "")
+      |> Option.value ~default:""
   | "tag" | "tags" -> (
       match List.assoc_opt "tag" p.attrs with
       | Some tags -> String.concat " " tags
@@ -277,7 +276,9 @@ let rec eval_filter (p : Page.page) (sx : sexp) : bool =
    group_by_key/field O(n) (see group_by_key),
    group-by-tag O(t * n) for t = tag sections (one filter pass per tag)
    plus O(t) dynamic-heading appends.  Output string built in one concat. *)
-let render_query_ (ctx : context) (args : sexp list) : string =
+let render_query (ctx : context) (args : sexp list) : string =
+  incr prof_query_n;
+  prof_time prof_query_t @@ fun () ->
   let where_cond = ref (Atom "true") in
   let sort_key = ref "" in
   let sort_desc = ref false in
@@ -297,13 +298,12 @@ let render_query_ (ctx : context) (args : sexp list) : string =
           sort_key := key;
           sort_desc := (dir = "desc")
       | List [Atom "format"; Atom fmt] -> format_mode := fmt
-      | List [Atom "group"; Atom "year"; Atom field] -> group_by_year := field
-      | List [Atom "group"; Atom "year"; Atom field; Atom dir] ->
+      | List (Atom "group" :: Atom "year" :: Atom field :: dir) ->
           group_by_year := field;
-          group_year_desc := (dir = "desc")
-      | List [Atom "group"; Atom "field"; Atom attr] -> group_by_field := attr
-      | List [Atom "group"; Atom "field"; Atom attr; Atom pair] ->
-          group_by_field := attr; group_field_pair := pair
+          group_year_desc := (dir = [Atom "desc"])
+      | List (Atom "group" :: Atom "field" :: Atom attr :: pair) ->
+          group_by_field := attr;
+          group_field_pair := (match pair with [Atom p] -> p | _ -> "")
       (* (group tag) or (group tag "skip-me" ...) to omit sections for given tags *)
       | List (Atom "group" :: Atom "tag" :: skips) ->
           group_by_tag := true;
@@ -350,7 +350,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
   | _ ->
       let ncols = List.length !cols in
       (* full-width label row separating groups (years, field values) *)
-      let group_header ncols label =
+      let group_header label =
         Printf.sprintf {|<tr><td colspan="%d" class="year-group">%s</td></tr>|}
           ncols label
       in
@@ -413,7 +413,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
           List.concat_map
             (fun (_, group_pages) ->
               let label = match group_pages with p :: _ -> joined (local_link ctx) p | [] -> "" in
-              group_header ncols label :: List.map make_row group_pages)
+              group_header label :: List.map make_row group_pages)
             grouped
         end
         else if !group_by_year = "" then List.map make_row sorted
@@ -425,7 +425,7 @@ let render_query_ (ctx : context) (args : sexp list) : string =
           in
           List.concat_map
             (fun (yr, pages) ->
-              group_header ncols (format_date_links ctx.page_index yr)
+              group_header (format_date_links ctx.page_index yr)
               :: List.map make_row pages)
             grouped_sorted
         end
@@ -472,10 +472,6 @@ let render_query_ (ctx : context) (args : sexp list) : string =
       end
       else "<table>\n" ^ header_html ^ String.concat "" rows_html ^ "</table>"
 
-let render_query (ctx : context) (args : sexp list) : string =
-  incr prof_query_n;
-  prof_time prof_query_t (fun () -> render_query_ ctx args)
-
 (* O(n * a): delegates to one tag-filtered query over all n pages. *)
 let render_navbar (ctx : context) : string =
   prof_time prof_navbar_t @@ fun () ->
@@ -506,36 +502,7 @@ let render_toc (headings : Heading.heading list) : string =
   in
   "<ul class=\"toc\">\n" ^ String.concat "" items ^ "</ul>"
 
-(* does [text] contain a link reference to /name?  Pages link as
-   [label](/name) or bare /name; the character after the match must not
-   be a slug char so /name does not count /name-foo as a backlink.
-   Complexity: O(L * m) worst case; L = text length, m = name length
-   (naive scan with a String.sub compare per position). *)
-let references_name (text : string) (name : string) : bool =
-  let needle = "/" ^ name in
-  let nn = String.length needle and n = String.length text in
-  let slug_char c =
-    (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c = '-'
-  in
-  let rec loop i =
-    if i + nn > n then false
-    else if String.sub text i nn = needle
-            && (i + nn = n || not (slug_char text.[i + nn]))
-    then true
-    else loop (i + 1)
-  in
-  loop 0
-
 (* Backlinks index: page name -> referring pages, in page-list order.
-   Instead of rescanning every page's raw text on each render (O(n^2 * L)
-   site-wide), one pass over all pages collects "/slug" candidates - a
-   '/' followed by a maximal run of name chars (references_name's slug
-   alphabet, extended with any extra chars actual page names use, e.g.
-   '.' in tags and '_' in file names).  A name is referenced by a
-   candidate when it ends the run or is followed by a non-slug char -
-   references_name's exact boundary rule, so /name matches and
-   /name-foo does not (candidates like /target-ext or /chaos.jetzt only
-   record the prefixes ending at a non-slug char).
    Built once and memoized on the physical identity of the pages list
    (bin/main.ml shares one list across all renders); hidden pages stay
    in the index exactly when they are in the ctx.pages list, as before.
@@ -662,7 +629,8 @@ let backlinks_of (pages : Page.page list) : backlinks =
 
 (* O(1) per rendered page (index lookup; see build_backlinks for the
    one-time O(n * L) cost). *)
-let render_backlinks_ (ctx : context) : string =
+let render_backlinks (ctx : context) : string =
+  prof_time prof_backlinks_t @@ fun () ->
   let refs =
     match Hashtbl.find_opt (backlinks_of ctx.pages) ctx.current.name with
     | Some ps -> ps
@@ -685,9 +653,6 @@ let render_backlinks_ (ctx : context) : string =
       in
       "<div class=\"backlinks\">Backlinks<br>\n" ^ String.concat "" items ^ "</div>"
 
-let render_backlinks (ctx : context) : string =
-  prof_time prof_backlinks_t (fun () -> render_backlinks_ ctx)
-
 let known_inline_ops = [
   "nav"; "list-pages"; "toc"; "backlinks"; "site-name";
   "img"; "link"; "table"; "green"; "bold"; "em"; "code"; "quote"; "query"; "meta"; "details";
@@ -695,7 +660,7 @@ let known_inline_ops = [
 ]
 
 (* S-expression interpreter: O(size of the sexp) plus the cost of each
-   operator - query and map dominate (see render_query_/Roughmap.render),
+   operator - query and map dominate (see render_query/Roughmap.render),
    everything else is linear in its arguments. *)
 let rec eval (ctx : context) (sx : sexp) : string =
   match sx with
@@ -716,27 +681,28 @@ and eval_item (ctx : context) (c : sexp) : string =
   | List _ -> eval ctx c
 
 and eval_call (ctx : context) (op : string) (args : sexp list) : string =
+  (* first pass only: output-only ops render nothing (queries still run,
+     so (group tag) headings are collected) *)
+  if ctx.collect_only && List.mem op ["nav"; "list-pages"; "toc"; "backlinks"; "map"]
+  then begin
+    if op = "backlinks" then ctx.backlinks_op_used <- true;
+    ""
+  end
+  else
   match (op, args) with
-  | "nav", _ ->
-      if ctx.collect_only then ""
-      else "<nav>" ^ render_navbar ctx ^ "</nav>"
+  | "nav", _ -> "<nav>" ^ render_navbar ctx ^ "</nav>"
 
   | "list-pages", Atom substr :: _ ->
-      if ctx.collect_only then ""
-      else
-        render_query ctx [
-          List [Atom "where"; List [Atom "contains"; Atom "title"; Atom substr]];
-          List [Atom "format"; Atom "list"];
-        ]
+      render_query ctx [
+        List [Atom "where"; List [Atom "contains"; Atom "title"; Atom substr]];
+        List [Atom "format"; Atom "list"];
+      ]
 
-  | "toc", _ ->
-      if ctx.collect_only then ""
-      else render_toc (ctx.headings @ ctx.hstate.dynamic_headings)
+  | "toc", _ -> render_toc (ctx.headings @ ctx.hstate.dynamic_headings)
 
   | "backlinks", _ ->
       ctx.backlinks_op_used <- true;
-      if ctx.collect_only then ""
-      else render_backlinks ctx
+      render_backlinks ctx
 
   | "site-name", _ -> ""
 
@@ -804,9 +770,7 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
 
   | "query", args -> render_query ctx args
 
-  | "map", args ->
-      if ctx.collect_only then ""
-      else Roughmap.render ctx.map_cache_dir args
+  | "map", args -> Roughmap.render ctx.map_cache_dir args
 
   | "meta", _ -> ""
 
@@ -968,12 +932,6 @@ type render_state = {
   mutable list_stack : (int * bool) list;  (* indent, is_ordered *)
 }
 
-let create_state (capacity : int) : render_state = {
-  buf = Buffer.create capacity;
-  in_para = false;
-  list_stack = [];
-}
-
 let close_para st =
   if st.in_para then (
     Buffer.add_string st.buf "</p>\n";
@@ -1083,7 +1041,7 @@ let render_text_block st (ctx : context) (text : string) =
                  swallowing the rest of the page into one escaped blob *)
               para_line line;
               process_lines remaining_lines)
-        else if Util.starts_with ~prefix:"<svg" line then (
+        else if String.starts_with ~prefix:"<svg" line then (
           close_block st;
           let rec collect_svg acc = function
             | [] ->
@@ -1099,7 +1057,7 @@ let render_text_block st (ctx : context) (text : string) =
                   collect_svg acc' more
           in
           collect_svg [raw_line] rest)
-        else if Util.starts_with ~prefix:">" line then (
+        else if String.starts_with ~prefix:">" line then (
           close_block st;
           (* group consecutive '>' lines into a single quoted paragraph *)
           let strip_quote_marker l =
@@ -1108,7 +1066,7 @@ let render_text_block st (ctx : context) (text : string) =
             Util.drop_prefix ~prefix:" " l
           in
           let is_quote_line l =
-            Util.starts_with ~prefix:">" (String.trim l)
+            String.starts_with ~prefix:">" (String.trim l)
           in
           let rec collect acc = function
             | l :: more when is_quote_line l ->
@@ -1130,7 +1088,7 @@ let render_text_block st (ctx : context) (text : string) =
               close_all_lists st;
               if line = "" then
                 close_para st
-              else if Util.starts_with ~prefix:"------" line || line = "---" then (
+              else if String.starts_with ~prefix:"------" line || line = "---" then (
                 close_para st;
                 Buffer.add_string st.buf "<hr>\n")
               else (
@@ -1146,7 +1104,11 @@ let render_text_block st (ctx : context) (text : string) =
 
 (* O(L) plus per-sexp evaluation costs; L = raw source length. *)
 let render_body (ctx : context) (raw : string) : string =
-  let st = create_state (String.length raw * 2) in
+  let st =
+    { buf = Buffer.create (String.length raw * 2);
+      in_para = false;
+      list_stack = [] }
+  in
   let blocks = split_code_blocks raw in
   List.iter
     (function

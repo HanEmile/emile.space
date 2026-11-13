@@ -64,10 +64,6 @@ let () =
   let contains = Vokobe2.Util.contains_substring in
 
   (* backlinks: a /name link counts, /name-foo does not *)
-  assert (Vokobe2.Render.references_name "see [notes](/gpn21) here" "gpn21");
-  assert (Vokobe2.Render.references_name "bare /gpn21 link" "gpn21");
-  assert (not (Vokobe2.Render.references_name "[x](/gpn21-foo)" "gpn21"));
-  assert (not (Vokobe2.Render.references_name "no link here" "gpn21"));
   let target_page = mk_page "target" "# target\n\n(backlinks)\n" in
   let linker = mk_page "linker" "# linker\n\nsee [notes](/target)\n" in
   let prefixer = mk_page "prefixer" "# prefixer\n\nsee [x](/target-ext)\n" in

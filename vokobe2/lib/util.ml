@@ -35,13 +35,9 @@ let contains_substring (hay : string) (needle : string) : bool =
     in
     loop 0
 
-let starts_with ~(prefix : string) (s : string) : bool =
-  let pl = String.length prefix and sl = String.length s in
-  pl <= sl && String.sub s 0 pl = prefix
-
 let drop_prefix ~(prefix : string) (s : string) : string =
   let pl = String.length prefix in
-  if starts_with ~prefix s then String.sub s pl (String.length s - pl) else s
+  if String.starts_with ~prefix s then String.sub s pl (String.length s - pl) else s
 
 (* O(len s). *)
 let html_escape (s : string) : string =

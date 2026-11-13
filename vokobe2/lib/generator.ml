@@ -48,9 +48,8 @@ let add_date_range_str (pages : Page.page list) : Page.page list =
     | _ -> p)
   pages
 
-(* a page's tags, [] when untagged *)
-let tags_of_page (p : Page.page) : string list =
-  Option.value ~default:[] (List.assoc_opt "tag" p.Page.attrs)
+(* a page's tags, [] when untagged (same accessor as in the renderer) *)
+let tags_of_page = Render.tags_of
 
 (* O(T log T); T = total tag occurrences across all pages. *)
 let collect_all_tags (pages : Page.page list) : string list =
@@ -341,21 +340,12 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
   let city_umbrella = make_umbrella_page "city" (pages @ all_generated) in
   all_generated @ Option.to_list umbrella @ Option.to_list city_umbrella
 
-(* O(len s). *)
-let clean_str (s : string) : string =
-  let s = String.trim s in
-  let len = String.length s in
-  if len >= 2 && s.[0] = '"' && s.[len - 1] = '"' then
-    String.sub s 1 (len - 2)
-  else
-    s
-
 (* O(a + d); a = attrs of the page, d = days in its date range (cap
    1000, see enumerate_date_range). *)
 let extract_dates_from_page (p : Page.page) : string list =
   let clean_first key =
     match List.assoc_opt key p.attrs with
-    | Some (v :: _) -> Some (clean_str v)
+    | Some (v :: _) -> Some (String.trim v)
     | _ -> None
   in
   (* Effective dates of a page: its (date ...) meta, or (published ...)
@@ -483,35 +473,16 @@ let strip_markdown (s : string) : string =
 
 (* first prose paragraph of a page (meta/queries skipped, markup stripped),
    capped at 280 chars, for <description>
-   Complexity: O(L); L = raw page length (two sexp-skip passes plus a
+   Complexity: O(L); L = raw page length (one sexp-dropping pass plus a
    paragraph split). *)
 let excerpt_of_raw (raw : string) : string =
   let n = String.length raw in
-  (* skip leading whitespace and balanced (sexp ...) blocks *)
-  let pos = ref 0 in
-  let rec skip_ws () =
-    while !pos < n && (raw.[!pos] = ' ' || raw.[!pos] = '\t' || raw.[!pos] = '\n' || raw.[!pos] = '\r') do
-      incr pos
-    done
-  in
-  let rec skip_sexp () =
-    skip_ws ();
-    if !pos < n && raw.[!pos] = '(' then begin
-      let depth = ref 0 in
-      while !pos < n && (!depth > 0 || raw.[!pos] = '(') do
-        if raw.[!pos] = '(' then incr depth
-        else if raw.[!pos] = ')' then decr depth;
-        incr pos
-      done;
-      skip_sexp ()
-    end
-  in
-  skip_sexp ();
-  (* drop every remaining (sexp ...) block -- (toc), (query ...), (map ...)
-     etc. -- tracking strings so quoted parens don't break the depth count *)
-  let prose = Buffer.create (n - !pos) in
+  (* drop every (sexp ...) block -- (meta ...), (toc), (query ...),
+     (map ...) etc. -- tracking strings so quoted parens don't break the
+     depth count; everything at depth 0 is kept as prose *)
+  let prose = Buffer.create n in
   let depth = ref 0 and in_str = ref false and esc = ref false in
-  for i = !pos to n - 1 do
+  for i = 0 to n - 1 do
     let c = raw.[i] in
     if !esc then esc := false
     else if !in_str then (

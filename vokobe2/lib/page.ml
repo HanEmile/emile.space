@@ -18,9 +18,9 @@ let parse_list_item (line : string) : (int * list_kind * string) option =
   in
   let indent = count_indent 0 in
   let rest = String.sub line indent (len - indent) in
-  if Util.starts_with ~prefix:"* " rest
-  || Util.starts_with ~prefix:"- " rest
-  || Util.starts_with ~prefix:"+ " rest
+  if String.starts_with ~prefix:"* " rest
+  || String.starts_with ~prefix:"- " rest
+  || String.starts_with ~prefix:"+ " rest
   then
     Some (indent, Unordered, String.trim (String.sub rest 2 (String.length rest - 2)))
   else
@@ -37,18 +37,19 @@ let parse_list_item (line : string) : (int * list_kind * string) option =
         Some (indent, Ordered, text)
     | _ -> None
 
-(* O(L) worst case; L = raw length (short scan to the first "# " line). *)
+(* O(L) worst case; L = raw length (short scan to the first level-1
+   heading, via the single heading parser used everywhere else). *)
 let page_title_of (name : string) (raw : string) : string =
-  let lines = String.split_on_char '\n' raw in
-  let rec find = function
-    | [] -> name
-    | line :: rest ->
-      let line = String.trim line in
-      if Util.starts_with ~prefix:"# " line then
-        String.trim (Util.drop_prefix ~prefix:"# " line)
-      else find rest
-  in
-  find lines
+  match
+    List.find_map
+      (fun line ->
+        match Heading.parse_heading line with
+        | Some (1, title) -> Some title
+        | _ -> None)
+      (String.split_on_char '\n' raw)
+  with
+  | Some title -> title
+  | None -> name
 
 (* O(a^2) worst case; a = attrs - per attr an assoc mem-check plus a
    rebuild/append of the accumulator.  Tiny in practice (few keys/page). *)
@@ -85,7 +86,7 @@ let code_block_ranges (raw : string) : (int * int) list =
       in
       let line = String.sub raw pos (line_end - pos) in
       let trimmed = String.trim line in
-      if Util.starts_with ~prefix:"```" trimmed then
+      if String.starts_with ~prefix:"```" trimmed then
         if in_code then aux line_end false 0 ((start, line_end) :: acc)
         else aux line_end true pos acc
       else aux line_end in_code start acc

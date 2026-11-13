@@ -366,30 +366,25 @@ let country_available cache_dir country : bool =
   outline_of_name outlines cname <> None
   || place_country_center places cname <> None
 
-(* used by Generator: the region a (country NAME) map would show
-   (padded, like the render)
-   Complexity: O(k + P) after memoized geodata. *)
-let country_region cache_dir country : region option =
-  let places, outlines, cname = country_geodata cache_dir country in
-  match outline_of_name outlines cname with
-  | Some (r, _) -> Some (pad_region country_pad r)
-  | None -> (
-      match place_country_center places cname with
-      | Some (lat, lon, w_km) -> (
-          match region_of_center ~aspect:None lat lon w_km with
-          | Ok r -> Some r
-          | Error _ -> None)
-      | None -> None)
-
 (* used by Generator: the region covering ALL of a country's rings
-   (including far-away parts) when stored; else the same as
-   country_region
+   (including far-away parts) when stored; else the region a
+   (country NAME) map would show (padded outline, or a centre map for
+   countries missing from Natural Earth)
    Complexity: O(k + P) after memoized geodata. *)
 let country_region_full cache_dir country : region option =
-  let _, outlines, cname = country_geodata cache_dir country in
+  let places, outlines, cname = country_geodata cache_dir country in
   match world_outline_of_name outlines cname with
   | Some (r, _) -> Some (pad_region country_pad r)
-  | None -> country_region cache_dir country
+  | None -> (
+      match outline_of_name outlines cname with
+      | Some (r, _) -> Some (pad_region country_pad r)
+      | None -> (
+          match place_country_center places cname with
+          | Some (lat, lon, w_km) -> (
+              match region_of_center ~aspect:None lat lon w_km with
+              | Ok r -> Some r
+              | Error _ -> None)
+          | None -> None))
 
 (* used by Generator: is the country's outline detailed enough that its
    map is a pure outline (vs. already a local Overpass map)?  city pages
@@ -490,9 +485,6 @@ let world_bin_all cache_dir (file, magic, quant) : wb_feature array =
 let world_base_available cache_dir =
   world_bin_available cache_dir world_base_file
 
-let world_rich_available cache_dir =
-  world_bin_available cache_dir world_rich_file
-
 (* -- Overpass fetching + caching -------------------------------------- *)
 
 let cache_filename (r : region) : string =
@@ -574,7 +566,8 @@ let load_region_json (cache_dir : string) (r : region) : (string, string) result
     Error
       "offline build: not fetching map data (map appears the next time the \
        site is built with internet access)"
-  else if world_base_available cache_dir || world_rich_available cache_dir then
+  else if world_base_available cache_dir
+          || world_bin_available cache_dir world_rich_file then
     (* the committed binary layers cover the whole planet offline; live
        Overpass fetches are never needed (rich data comes from local
        extracts via extract-map-cache.py) *)
@@ -1002,16 +995,15 @@ let render_svg (spec : spec) (r : region) (features : feature list) :
   let decimate pts = rdp 1.5 pts in
   (* skip rings too small to see (fountains, tiny ponds) *)
   let big_enough_ring g =
-    let xs = List.map (fun p -> fst (project p)) g in
-    let ys = List.map (fun p -> snd (project p)) g in
-    match xs, ys with
-    | [], _ | _, [] -> false
-    | x0 :: _, y0 :: _ ->
-        let minmax init f l = List.fold_left f init l in
-        let min_x = minmax x0 Float.min xs in
-        let max_x = minmax x0 Float.max xs in
-        let min_y = minmax y0 Float.min ys in
-        let max_y = minmax y0 Float.max ys in
+    match List.map project g with
+    | [] -> false
+    | (x0, y0) :: rest ->
+        let min_x, max_x, min_y, max_y =
+          List.fold_left
+            (fun (a, b, c, d) (x, y) ->
+              (Float.min a x, Float.max b x, Float.min c y, Float.max d y))
+            (x0, x0, y0, y0) rest
+        in
         (max_x -. min_x) *. (max_y -. min_y) >= 4.0
   in
   (* road density: dense city maps (Hong Kong, Singapore) need much
@@ -1458,7 +1450,7 @@ let render_cached cache_dir args ~deps f =
       let html = f () in
       (* failed maps are not cached: a later build with fresh data or
          network access should retry them *)
-      if not (Util.starts_with ~prefix:"<div class=\"map-error\"" html)
+      if not (String.starts_with ~prefix:"<div class=\"map-error\"" html)
       then begin
         Util.ensure_dir dir;
         (try Util.write_file path html with _ -> ())
@@ -1476,7 +1468,9 @@ let render_error (msg : string) : string =
    O(bin/L) or O(network) on first use) plus render_svg; the offline
    fallback adds an O(B) scan per binary layer.  Country/world maps pay
    only geodata lookup + render_svg. *)
-let render_ (cache_dir : string) (args : sexp list) : string =
+let render (cache_dir : string) (args : sexp list) : string =
+  incr prof_map_n;
+  prof_time prof_map_t @@ fun () ->
   let finish spec r features =
     match render_svg spec r features with
     | Error e -> render_error e
@@ -1616,7 +1610,3 @@ let render_ (cache_dir : string) (args : sexp list) : string =
                   | Error e -> render_error e
                   | Ok r -> via_overpass spec r)
               | None -> render_error ("no geodata for country " ^ name))))
-
-let render (cache_dir : string) (args : sexp list) : string =
-  incr prof_map_n;
-  prof_time prof_map_t (fun () -> render_ cache_dir args)
