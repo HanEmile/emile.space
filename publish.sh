@@ -2,22 +2,22 @@
 set -e
 cd "$(dirname "$0")"
 
-VERBOSE=0
+VERBOSE="${VERBOSE:-0}"
+PREP=1
+BUILD_ARGS=""
 for arg in "$@"; do
   case "$arg" in
     --verbose|-v) VERBOSE=1 ;;
+    --no-prep)    PREP=0 ;;
+    *)            BUILD_ARGS="$BUILD_ARGS $arg" ;;
   esac
 done
+export VERBOSE  # honored by build.sh and sync.sh
 
-BUILD_ARGS="$*"
-SYNC_ARGS=""
-if [ "$VERBOSE" = "1" ]; then
-  SYNC_ARGS="--verbose"
-fi
-
-# data prep: one nix-shell for everything (dates, geodata, map regions).
-# each step is internally stamped and exits in ~0 s when nothing changed.
-nix-shell shell.nix --run '
+if [ "$PREP" = "1" ]; then
+  # data prep: one nix-shell for everything (dates, geodata, map regions).
+  # each step is internally stamped and exits in ~0 s when nothing changed.
+  nix-shell shell.nix --run '
 set -e
 echo "[ ] updating modified dates ..."
 python3 update-modified.py
@@ -37,6 +37,8 @@ if [ -d map-cache/osm ]; then
   fi
 fi
 '
+fi
 
+# shellcheck disable=SC2086
 ./build.sh $BUILD_ARGS
-./sync.sh $SYNC_ARGS
+./sync.sh

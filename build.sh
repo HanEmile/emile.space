@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")"
 
-VERBOSE=0
+VERBOSE="${VERBOSE:-0}"
 CHECK_LINKS=1
 OFFLINE=0
 BASE_URL="http://localhost:8081"

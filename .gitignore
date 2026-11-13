@@ -37,5 +37,3 @@ map-cache/osm/
 
 # backups & migration leftovers (local only)
 *.bak
-input_backup/
-main_backup

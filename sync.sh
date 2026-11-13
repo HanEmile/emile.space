@@ -3,12 +3,10 @@ set -e
 
 cd "$(dirname "$0")"
 
-VERBOSE=0
-for arg in "$@"; do
-  case "$arg" in
-    --verbose|-v) VERBOSE=1 ;;
-  esac
-done
+VERBOSE="${VERBOSE:-0}"
+case " $* " in
+  *" --verbose "*|*" -v "*) VERBOSE=1 ;;
+esac
 
 RSYNC_FLAGS="-a --checksum --links --delete --exclude '.git'"
 if [ "$VERBOSE" = "1" ]; then

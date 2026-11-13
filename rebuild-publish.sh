@@ -2,7 +2,6 @@
 set -e
 cd "$(dirname "$0")"
 
-echo "rebuilding vokobe2 and then publishing emile.space"
+echo "rebuilding vokobe2, then publishing emile.space (skipping data prep)"
 nix-shell shell.nix --run "cd vokobe2 && dune build"
-./build.sh
-./sync.sh
+./publish.sh --no-prep "$@"
