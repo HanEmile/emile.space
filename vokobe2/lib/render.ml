@@ -822,7 +822,8 @@ let render_book (ctx : context) (tag : string) : string =
         ctx.hstate.dynamic_headings
           <- ctx.hstate.dynamic_headings
              @ Heading.
-               [{ level = 2; title = label; slug = cid; number_str = ch_num }];
+               [{ level = 2; title = label; slug = cid;
+                  number_str = ch_num ^ " " ^ label }];
         let headings =
           Heading.collect_headings raw
           |> List.map (fun (h : Heading.heading) ->
@@ -843,10 +844,10 @@ let render_book (ctx : context) (tag : string) : string =
         Buffer.add_string buf
           (Printf.sprintf
              {|<section class="chapter" id="%s">
-<h2 id="%s" style="--is: --h-%d"><a href="#%s">%s %s</a> <a href="/%s">↗</a></h2>
+<h2 id="%s" style="--is: --h-%d"><a href="#%s">%s</a> <a href="/%s">%s</a></h2>
 %s</section>
 |}
-             cid cid idx cid ch_num (Util.html_escape label) p.Page.name
+             cid cid idx cid ch_num p.Page.name (Util.html_escape label)
              body))
       chapters;
     Buffer.add_string buf "</div>\n";

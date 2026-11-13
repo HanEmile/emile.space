@@ -174,7 +174,7 @@ Second paragraph.
   (* chapter titles are real numbered h2 headings with a permalink *)
   assert (contains html {|<h2 id="chapter-ch-old"|});
   assert (contains html {|1.1. Old|});
-  assert (contains html {|<a href="/ch-old">↗</a>|});
+  assert (contains html {|<a href="/ch-old">Old</a>|});
   (* ... and the (toc), even placed above the book op, lists them *)
   assert (contains html {|<a href="#chapter-ch-old"|}
           || failwith "toc missing chapter link");
