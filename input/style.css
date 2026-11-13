@@ -261,3 +261,7 @@ svg.roughmap .shaded { fill: rgba(214, 165, 25, 0.30); }
 /* related pages at the bottom of the content */
 .related { opacity: 0.65; font-size: 0.9em; margin-top: 4ex; }
 @media print { .related { display: none; } }
+
+/* chapter titles link to the standalone page */
+.chapter h2 a[href^="/"]:last-child { opacity: 0.5; text-decoration: none; }
+@media print { .chapter h2 a[href^="/"]:last-child { display: none; } }

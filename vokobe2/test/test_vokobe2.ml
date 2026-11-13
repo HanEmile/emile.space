@@ -60,6 +60,7 @@ let () =
         collect_only = false;
         backlinks_op_used = false;
         book_depth = 0;
+        heading_offset = 0;
         history = Hashtbl.create 4;
         feed = None;
       }
@@ -149,9 +150,15 @@ Second paragraph.
      chapter headings renumber independently *)
   let ch_old = mk_page "ch-old" "(meta (tag \"story\") (published \"2024-01-01\"))\n\n# Old\n\nold text.\n" in
   let ch_new = mk_page "ch-new" "(meta (tag \"story\") (published \"2025-01-01\"))\n\n# New\n\nnew text.\n" in
-  let book = mk_page "my-book" "(meta (tag \"story\") (published \"2026-01-01\"))\n\n# My Book\n\n(book \"story\")\n" in
+  let book = mk_page "my-book" "(meta (tag \"story\") (published \"2026-01-01\"))\n\n# My Book\n\n(toc)\n\n(book \"story\")\n" in
   let pages = [book; ch_new; ch_old] in
-  let html = Vokobe2.Render.render_body (ctx pages book) book.raw in
+  (* production does pass1 (collect_only) then pass2 with the collected
+     dynamic headings; chapter titles must reach the (toc) above the
+     book op the same way *)
+  let c0 = { (ctx pages book) with Vokobe2.Render.collect_only = true } in
+  let _ = Vokobe2.Render.render_body c0 book.raw in
+  let c2 = { (ctx pages book) with headings = c0.hstate.dynamic_headings } in
+  let html = Vokobe2.Render.render_body c2 book.raw in
   let index_of hay needle =
     let n = String.length hay and m = String.length needle in
     let rec go i =
@@ -164,7 +171,13 @@ Second paragraph.
   (* published 2024 chapter must sort before published 2025 *)
   assert (index_of html "chapter-ch-old" > 0
           && index_of html "chapter-ch-old" < index_of html "chapter-ch-new");
-  assert (contains html {|<a href="/ch-old">Old</a>|});
+  (* chapter titles are real numbered h2 headings with a permalink *)
+  assert (contains html {|<h2 id="chapter-ch-old"|});
+  assert (contains html {|1.1. Old|});
+  assert (contains html {|<a href="/ch-old">↗</a>|});
+  (* ... and the (toc), even placed above the book op, lists them *)
+  assert (contains html {|<a href="#chapter-ch-old"|}
+          || failwith "toc missing chapter link");
   assert (contains html "old text." && contains html "new text.");
   assert (not (contains html "chapter-my-book"));
   (* chapters' own top-level h1s are stripped (chapter-title replaces

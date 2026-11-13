@@ -54,6 +54,10 @@ type context = {
   (* (book ...) chapter nesting depth; > 0 disables nested book ops so a
      book can never include itself (directly or transitively) *)
   book_depth : int;
+  (* heading-level shift for chapter content inside (book ...): 0 on a
+     normal page, 1 inside a chapter so its content nests below the
+     chapter title *)
+  heading_offset : int;
   (* optional git history: page name -> (created, modified, n_edits);
      empty when history.json is absent *)
   history : (string, int * int * int) Hashtbl.t;
@@ -762,7 +766,11 @@ let render_backlinks (ctx : context) : string =
    with a fresh heading state (own numbering) and link back to the
    standalone page; nested books are disabled via ctx.book_depth so a
    book can never include itself.  O(total chapter bytes); chapter
-   queries hit the cross-page query memo. *)
+   queries hit the cross-page query memo.
+   Headings: chapters render against a shifted level offset so their
+   content nests under the chapter title (book h1 -> chapter title h2,
+   content starts at h3); the (toc) therefore contains chapter titles
+   AND chapter content like any other toc. *)
 (* render_body is defined far below (its block machinery sits after the
    eval chain); books are only invoked via eval_call at runtime, long
    after module load, so resolve it through this late reference. *)
@@ -787,7 +795,7 @@ let render_book (ctx : context) (tag : string) : string =
       (Util.html_escape tag)
   else
     let buf = Buffer.create 4096 in
-    Buffer.add_string buf "<div class=\"book\">\n<ul class=\"book-toc\">\n";
+    Buffer.add_string buf "<div class=\"book\">\n";
     (* chapter label: title + (YYYY-MM) when dated -- otherwise same-city
        repeat visits (Bangkok Sep + Bangkok Nov) look like duplicates *)
     let label_of (p : Page.page) =
@@ -798,17 +806,28 @@ let render_book (ctx : context) (tag : string) : string =
     in
     List.iteri
       (fun i (p : Page.page) ->
-        Buffer.add_string buf
-          (Printf.sprintf "<li>%d. <a href=\"#chapter-%s\">%s</a></li>\n"
-             (i + 1) p.Page.name (Util.html_escape (label_of p))))
-      chapters;
-    Buffer.add_string buf "</ul>\n";
-    List.iteri
-      (fun i (p : Page.page) ->
         (* drop the chapter's own top-level h1 (its title): the injected
-           chapter-title takes that role -- one h1 per chapter *)
+           chapter-title takes that role -- one title per chapter *)
         let raw = Page.drop_first_h1 p.Page.raw in
-        let headings = Heading.collect_headings raw in
+        let label = label_of p in
+        (* chapter titles are h2 headings and join the book page's
+           numbering/dynamic-heading flow, so a (toc) on the book page
+           shows chapters and their content like any other toc *)
+        let cid = "chapter-" ^ p.Page.name in
+        let counters2 = Heading.update_counters ctx.hstate.counters 2 in
+        ctx.hstate.counters <- counters2;
+        let ch_num = Heading.format_counter counters2 in
+        let idx = ctx.hstate.toc_index in
+        ctx.hstate.toc_index <- idx + 1;
+        ctx.hstate.dynamic_headings
+          <- ctx.hstate.dynamic_headings
+             @ Heading.
+               [{ level = 2; title = label; slug = cid; number_str = ch_num }];
+        let headings =
+          Heading.collect_headings raw
+          |> List.map (fun (h : Heading.heading) ->
+                 { h with Heading.level = min 6 (h.level + 1) })
+        in
         let cctx =
           {
             ctx with
@@ -816,17 +835,18 @@ let render_book (ctx : context) (tag : string) : string =
             headings;
             hstate = new_heading_state ();
             book_depth = ctx.book_depth + 1;
+            heading_offset = 1;
             backlinks_op_used = false;
           }
         in
         let body = !render_body_late cctx raw in
         Buffer.add_string buf
           (Printf.sprintf
-             {|<section class="chapter" id="chapter-%s">
-<h1 class="chapter-title">%d. <a href="/%s">%s</a></h1>
+             {|<section class="chapter" id="%s">
+<h2 id="%s" style="--is: --h-%d"><a href="#%s">%s %s</a> <a href="/%s">↗</a></h2>
 %s</section>
 |}
-             p.Page.name (i + 1) p.Page.name (Util.html_escape (label_of p))
+             cid cid idx cid ch_num (Util.html_escape label) p.Page.name
              body))
       chapters;
     Buffer.add_string buf "</div>\n";
@@ -861,8 +881,10 @@ and eval_item (ctx : context) (c : sexp) : string =
 
 and eval_call (ctx : context) (op : string) (args : sexp list) : string =
   (* first pass only: output-only ops render nothing (queries still run,
-     so (group tag) headings are collected) *)
-  if ctx.collect_only && List.mem op ["nav"; "list-pages"; "toc"; "backlinks"; "map"; "book"]
+     so (group tag) headings are collected).  (book ...) is NOT skipped:
+     its chapters emit level-shifted headings that the page's (toc)
+     needs, so the first pass renders books purely for collection. *)
+  if ctx.collect_only && List.mem op ["nav"; "list-pages"; "toc"; "backlinks"; "map"]
   then begin
     if op = "backlinks" then ctx.backlinks_op_used <- true;
     ""
@@ -1163,8 +1185,10 @@ let close_block st =
    heading.  Numbering/toc-index are threaded through ctx.hstate, shared
    with the dynamic (group tag) headings emitted by queries.
    Complexity: O(level + len title + d), d = open list depth. *)
-let render_heading st (ctx : context) level title =
+let render_heading st (ctx : context) parsed_level title =
   close_block st;
+  (* chapters inside (book ...) nest one level below the chapter title *)
+  let level = min 6 (parsed_level + ctx.heading_offset) in
   ctx.hstate.counters <- Heading.update_counters ctx.hstate.counters level;
   let num_str = Heading.format_counter ctx.hstate.counters in
   let id = Heading.slugify title in

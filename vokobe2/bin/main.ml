@@ -179,6 +179,7 @@ let () =
           collect_only;
           backlinks_op_used = false;
           book_depth = 0;
+          heading_offset = 0;
           history;
           feed =
             (match Hashtbl.find_opt feed_of_page page.Page.name with
