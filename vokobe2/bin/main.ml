@@ -126,6 +126,7 @@ let () =
           hstate = Render.new_heading_state ();
           map_cache_dir;
           collect_only;
+          backlinks_op_used = false;
         }
     in
     (* First pass: discover any headings emitted dynamically by queries.

@@ -44,6 +44,9 @@ type context = {
   (* first pass only: skip output-only work (maps, nav, backlinks, toc);
      (query ...) still runs so its dynamic headings are collected *)
   collect_only : bool;
+  (* set when the page explicitly invokes (backlinks); render_html then
+     skips the automatic backlink box to avoid a duplicate *)
+  mutable backlinks_op_used : bool;
 }
 
 let page_link (p : Page.page) : string = "/" ^ p.name
@@ -68,16 +71,21 @@ let cmp_str ~desc a b =
 
 (* Group items by key, merging non-adjacent occurrences of the same key.
    Keys keep first-appearance order, items keep their incoming order.
-   Complexity: O(i * g) with i = items, g = distinct groups (per item an
-   assoc scan plus an acc rebuild); worst case O(i^2) when all keys differ. *)
+   Complexity: O(i); i = items (Hashtbl lookup per item, rev-append into
+   the bucket, one List.rev per group at the end). *)
 let group_by_key (key_of : 'a -> string) (items : 'a list) : (string * 'a list) list =
-  List.fold_left
-    (fun acc x ->
+  let groups : (string, 'a list) Hashtbl.t = Hashtbl.create 16 in
+  let keys = ref [] in
+  List.iter
+    (fun x ->
       let k = key_of x in
-      if List.mem_assoc k acc then
-        List.map (fun (k2, xs) -> if k2 = k then (k2, xs @ [x]) else (k2, xs)) acc
-      else acc @ [(k, [x])])
-    [] items
+      match Hashtbl.find_opt groups k with
+      | Some xs -> Hashtbl.replace groups k (x :: xs)
+      | None ->
+          Hashtbl.replace groups k [x];
+          keys := k :: !keys)
+    items;
+  List.map (fun k -> (k, List.rev (Hashtbl.find groups k))) (List.rev !keys)
 
 (* O(1): Hashtbl lookup. *)
 let tag_link (index : page_index) (tag : string) : string =
@@ -121,7 +129,7 @@ let local_link (ctx : context) (v : string) : string =
 (* Rendered/HTML value of an attribute, for display (info bar, table
    columns): dates become links, values naming a page become links.
    Complexity: O(a) assoc scans, a = page attrs; the location branch is
-   O(l^2) in l = number of cities (List.nth_opt once per index). *)
+   O(l) in l = number of cities (cities and countries zipped once). *)
 let get_page_attr (ctx : context) (p : Page.page) (key : string) : string =
   (* single ISO date rendered as archive links *)
   let links d = format_date_links ctx.page_index d in
@@ -160,15 +168,18 @@ let get_page_attr (ctx : context) (p : Page.page) (key : string) : string =
       |> String.concat ", "
   | "location" ->
       (* Zip cities and countries into "City, Country" pairs, " / " separated *)
-      let cities   = Option.value ~default:[] (List.assoc_opt "location" p.attrs) in
+      let cities    = Option.value ~default:[] (List.assoc_opt "location" p.attrs) in
       let countries = Option.value ~default:[] (List.assoc_opt "country"  p.attrs) in
-      List.mapi (fun i city ->
-        let city_html = local_link ctx city in
-        match List.nth_opt countries i with
-        | Some c -> city_html ^ ", " ^ local_link ctx c
-        | None   -> city_html)
-        cities
-      |> String.concat " / "
+      let rec zip cities countries =
+        match cities with
+        | [] -> []
+        | city :: cs ->
+            let city_html = local_link ctx city in
+            (match countries with
+             | c :: cs' -> (city_html ^ ", " ^ local_link ctx c) :: zip cs cs'
+             | [] -> city_html :: zip cs [])
+      in
+      String.concat " / " (zip cities countries)
   | _ -> (
       match List.assoc_opt key p.attrs with
       | Some vals -> vals |> List.map (local_link ctx) |> String.concat ", "
@@ -263,7 +274,7 @@ let rec eval_filter (p : Page.page) (sx : sexp) : bool =
 (* The query engine.  Complexity over n = pages with a = attrs/page:
    filtering O(n * a), sorting O(n log n) comparisons with an O(a) raw
    attr lookup each, each emitted row O(cols * a).  Grouping adds:
-   group_by_key/field O(n * g) worst case (g = groups, see group_by_key),
+   group_by_key/field O(n) (see group_by_key),
    group-by-tag O(t * n) for t = tag sections (one filter pass per tag)
    plus O(t) dynamic-heading appends.  Output string built in one concat. *)
 let render_query_ (ctx : context) (args : sexp list) : string =
@@ -515,16 +526,96 @@ let references_name (text : string) (name : string) : bool =
   in
   loop 0
 
-(* O(n * L) per rendered page: references_name-scan over the raw text of
-   every page (n = pages, L = raw length).  Rendered once per page, so
-   the site-wide backlink cost is O(n^2 * L). *)
+(* Backlinks index: page name -> referring pages, in page-list order.
+   Instead of rescanning every page's raw text on each render (O(n^2 * L)
+   site-wide), one pass over all pages collects "/slug" candidates - a
+   '/' followed by a maximal run of name chars (references_name's slug
+   alphabet, extended with any extra chars actual page names use, e.g.
+   '.' in tags and '_' in file names).  A name is referenced by a
+   candidate when it ends the run or is followed by a non-slug char -
+   references_name's exact boundary rule, so /name matches and
+   /name-foo does not (candidates like /target-ext or /chaos.jetzt only
+   record the prefixes ending at a non-slug char).
+   Built once and memoized on the physical identity of the pages list
+   (bin/main.ml shares one list across all renders); hidden pages stay
+   in the index exactly when they are in the ctx.pages list, as before.
+   Complexity: O(n * L) once per pages list (n = pages, L = raw length);
+   lookup O(1). *)
+type backlinks = (string, Page.page list) Hashtbl.t
+
+let backlinks_cache : (Page.page list * backlinks) option ref = ref None
+
+let build_backlinks (pages : Page.page list) : backlinks =
+  let names = page_index_of pages in
+  (* boundary chars (references_name's slug_char) vs. chars any page
+     name may contain (slug chars plus dotted/underscored names) *)
+  let is_slug = Array.make 256 false in
+  let is_name_char = Array.make 256 false in
+  String.iter
+    (fun c ->
+      is_slug.(Char.code c) <- true;
+      is_name_char.(Char.code c) <- true)
+    "abcdefghijklmnopqrstuvwxyz0123456789-";
+  List.iter
+    (fun (p : Page.page) ->
+      String.iter (fun c -> is_name_char.(Char.code c) <- true) p.Page.name)
+    pages;
+  is_name_char.(Char.code '/') <- false;
+  let add_edge edges (p : Page.page) seen name =
+    if name <> "" && name <> p.Page.name && Hashtbl.mem names name
+       && not (Hashtbl.mem seen name)
+    then begin
+      Hashtbl.replace seen name ();
+      let prev =
+        match Hashtbl.find_opt edges name with Some ps -> ps | None -> []
+      in
+      Hashtbl.replace edges name (p :: prev)
+    end
+  in
+  let edges : backlinks = Hashtbl.create 256 in
+  List.iter
+    (fun (p : Page.page) ->
+      let text = p.Page.raw in
+      let n = String.length text in
+      let seen : (string, unit) Hashtbl.t = Hashtbl.create 16 in
+      let i = ref 0 in
+      while !i + 1 < n do
+        if text.[!i] = '/' && is_name_char.(Char.code text.[!i + 1]) then begin
+          let start = !i + 1 in
+          let stop = ref start in
+          while !stop < n && is_name_char.(Char.code text.[!stop]) do
+            incr stop
+          done;
+          (* every run prefix ending at a non-slug char (or at the run's
+             end) is a referenced name *)
+          for j = start to !stop - 1 do
+            if j + 1 = !stop || not is_slug.(Char.code text.[j + 1]) then
+              add_edge edges p seen (String.sub text start (j - start + 1))
+          done;
+          i := !stop
+        end
+        else incr i
+      done)
+    pages;
+  (* buckets were built by prepending; restore page-list order *)
+  Hashtbl.filter_map_inplace (fun _ ps -> Some (List.rev ps)) edges;
+  edges
+
+let backlinks_of (pages : Page.page list) : backlinks =
+  match !backlinks_cache with
+  | Some (key, edges) when key == pages -> edges
+  | _ ->
+      let edges = build_backlinks pages in
+      backlinks_cache := Some (pages, edges);
+      edges
+
+(* O(1) per rendered page (index lookup; see build_backlinks for the
+   one-time O(n * L) cost). *)
 let render_backlinks_ (ctx : context) : string =
   let refs =
-    List.filter
-      (fun p ->
-        p.Page.name <> ctx.current.name
-        && references_name p.Page.raw ctx.current.name)
-      ctx.pages
+    match Hashtbl.find_opt (backlinks_of ctx.pages) ctx.current.name with
+    | Some ps -> ps
+    | None -> []
   in
   match refs with
   | [] -> ""
@@ -587,6 +678,7 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
       else render_toc (ctx.headings @ ctx.hstate.dynamic_headings)
 
   | "backlinks", _ ->
+      ctx.backlinks_op_used <- true;
       if ctx.collect_only then ""
       else render_backlinks ctx
 
@@ -1019,6 +1111,13 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
                   |> String.concat ", " in
       Printf.sprintf " style=\"timeline-scope: %s\"" names
   in
+  (* automatic backlink box at the start of <main>: a sticky right
+     sidebar on wide screens (see style.css, .backlinks), moved to the
+     page bottom via flex order on narrow ones.  Skipped when the page
+     already renders a box itself via (backlinks).  O(1) lookup. *)
+  let backlinks =
+    if ctx.backlinks_op_used then "" else render_backlinks ctx
+  in
   Printf.sprintf
     {|<!DOCTYPE html>
 <html lang="en">
@@ -1037,7 +1136,7 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
   <nav>%s</nav>
   %s
   <main%s>
-%s  </main>
+%s%s  </main>
   <footer>
     <br><br><br>
     <a href="https://social.emile.space/@hanemile/feed.rss" target="_blank" rel="noopener" class="icon"><img class="webring" src="/rss.svg" alt="rss" height="32px"/></a>
@@ -1056,5 +1155,6 @@ let render_html (site_name : string) (ctx : context) (body : string) : string =
     (render_navbar ctx)
     (render_info_bar ctx)
     scope_style
+    backlinks
     body
     (Util.html_escape site_name)

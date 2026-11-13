@@ -56,15 +56,22 @@ let tags_of_page (p : Page.page) : string list =
 let collect_all_tags (pages : Page.page list) : string list =
   pages |> List.concat_map tags_of_page |> List.sort_uniq String.compare
 
+(* the set of page names of a list, for O(1) "name already taken" checks *)
+let page_name_set (pages : Page.page list) : (string, unit) Hashtbl.t =
+  let t = Hashtbl.create (List.length pages * 2) in
+  List.iter (fun (p : Page.page) -> Hashtbl.replace t p.Page.name ()) pages;
+  t
+
 (* one generated pseudo-page per key (index pages for tags, dates, ...);
    a real page with the key's name always wins, only attrs/raw differ per
    generator
-   Complexity: O(k * n); k = keys, n = base pages - the "real page wins"
-   check is a linear List.exists over base_pages for every key. *)
+   Complexity: O(k + n); k = keys, n = base pages - the "real page wins"
+   check is a Hashtbl.mem against a name set built once up front. *)
 let gen_index_pages base_pages keys attrs_of raw_of : Page.page list =
+  let taken = page_name_set base_pages in
   List.filter_map
     (fun key ->
-      if List.exists (fun (p : Page.page) -> p.name = key) base_pages then
+      if Hashtbl.mem taken key then
         None
       else
         Some
@@ -95,7 +102,7 @@ let make_umbrella_page (attr : string) (pages : Page.page list) : Page.page opti
           attr attr;
     } : Page.page)
 
-(* O(t * n): gen_index_pages over t = distinct tags against n pages. *)
+(* O(t + n): gen_index_pages over t = distinct tags against n pages. *)
 let generate_tag_pages (pages : Page.page list) : Page.page list =
   let individual =
     gen_index_pages pages (collect_all_tags pages)
@@ -127,12 +134,12 @@ let center_map_block lat lon label =
 let country_map_block country inner =
   Printf.sprintf "(map (country \"%s\")%s)\n\n" (Sexp.escaped_str country) inner
 
-(* O(n * l_p + l * (n + g) + c * l): locations are collected in one pass
-   over n pages with l_p locations/page; each of the l distinct locations
-   runs safe_page with a linear name check over n + g pages (g generated
-   so far), and each of the c countries scans all l locations for map
-   markers.  Roughmap geodata lookups are memoized O(1)-ish after the
-   first call. *)
+(* O(n * l_p + n + l + c * l): locations are collected in one pass over
+   n pages with l_p locations/page; each of the l distinct locations
+   runs safe_page with a Hashtbl.mem name check against sets built once
+   (base pages, later plus the city pages), and each of the c countries
+   scans all l locations for map markers.  Roughmap geodata lookups are
+   memoized O(1)-ish after the first call. *)
 let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
     : Page.page list =
   let locations =
@@ -158,15 +165,14 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
   in
   (* slug-named page for one location string; skipped when the slug is
      empty or the name is already taken (real pages first, then earlier
-     generated ones) *)
+     generated ones).  Name sets are built once per list; the checks
+     themselves are Hashtbl.mem. *)
+  let taken = page_name_set pages in
+  let no_also = Hashtbl.create 0 in
   let safe_page ~also ~title ~attrs raw : Page.page option =
     let slug = Util.sanitize title in
     if slug = "" then None
-    else if
-      List.exists
-        (fun (p : Page.page) -> p.Page.name = slug)
-        (pages @ also)
-    then None
+    else if Hashtbl.mem taken slug || Hashtbl.mem also slug then None
     else Some ({Page.name = slug; title; attrs; raw} : Page.page)
   in
   let city_pages = List.filter_map
@@ -209,7 +215,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
               | None -> "")
           | _ -> ""
         in
-        safe_page ~also:[] ~title:city ~attrs
+        safe_page ~also:no_also ~title:city ~attrs
           (Printf.sprintf
           {|# %s
 
@@ -226,6 +232,7 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
     |> List.filter_map snd
     |> List.sort_uniq String.compare
   in
+  let city_names = page_name_set city_pages in
   let country_pages = List.filter_map
     (fun country ->
         let escaped = Sexp.escaped_str country in
@@ -256,7 +263,8 @@ let generate_location_pages ~(map_cache_dir : string) (pages : Page.page list)
                | ms -> " " ^ String.concat " " ms)
           else ""
         in
-        safe_page ~also:city_pages ~title:country ~attrs:[("tag", ["location"])]
+        safe_page ~also:city_names ~title:country
+          ~attrs:[("tag", ["location"])]
           (Printf.sprintf
           {|# %s
 
@@ -377,7 +385,7 @@ let collect_date_keys (pages : Page.page list) : string list =
   in
   List.sort_uniq String.compare keys
 
-(* O(D log D + k * n): collect D dates, then gen_index_pages over
+(* O(D log D + k + n): collect D dates, then gen_index_pages over
    k = distinct date keys against n pages. *)
 let generate_date_pages (pages : Page.page list) : Page.page list =
   let individual =

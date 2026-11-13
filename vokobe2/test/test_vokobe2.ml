@@ -58,6 +58,7 @@ let () =
         hstate = Vokobe2.Render.new_heading_state ();
         map_cache_dir = ".";
         collect_only = false;
+        backlinks_op_used = false;
       }
   in
   let contains = Vokobe2.Util.contains_substring in

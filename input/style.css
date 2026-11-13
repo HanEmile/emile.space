@@ -141,6 +141,13 @@ nav ul li form input { outline: none; height: 100%; position: relative; top: -1p
   .backlinks { margin: 1ex -45ex 10ex 1ex; }
 }
 
+/* auto-emitted backlinks (start of <main>): without room for the right
+   sidebar, reorder them to the page bottom */
+@media only screen and (max-width: 1359px) {
+  main { display: flex; flex-direction: column; }
+  main > .backlinks { order: 9999; }
+}
+
 .toc,.backlinks { padding-bottom: 1ex; }
 li.toc-h2 { margin-top: 2ex; }
 li.toc-h3 { margin-top: .2ex; }

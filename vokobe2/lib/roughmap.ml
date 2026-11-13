@@ -619,26 +619,38 @@ type feature =
   | Outline of geom (* country border ring *)
   | Coast_line of geom (* open shoreline segments *)
 
+let world_bin_features_cache
+    : (string * float * float * float * float, feature list) Hashtbl.t =
+  Hashtbl.create 16
+
 (* bin-layer features intersecting a region
-   Complexity: O(B) full scan of the layer's B features per call (bbox
-   filter; the decode itself is memoized, the filter is not). *)
-let world_bin_features cache_dir which (r : region) : feature list option =
+   Complexity: O(B) full scan of the layer's B features on the first
+   call per (layer, region); memoized afterwards.  The region floats of
+   the key are rounded to 1e-6 (~10 cm; the layer bboxes themselves are
+   quantized at 1e-4), so repeated maps of the same region hit the cache.
+   The cached list is only read (iterated/filtered), never mutated. *)
+let world_bin_features cache_dir ((file, _, _) as which) (r : region)
+    : feature list option =
   if not (world_bin_available cache_dir which) then None
   else
+    let round v = Float.round (v *. 1e6) /. 1e6 in
+    let key = (file, round r.south, round r.west, round r.north, round r.east) in
     Some
-      (Array.fold_left
-         (fun acc (cls, s, w, n, e, g) ->
-           if e < r.west || w > r.east || n < r.south || s > r.north then acc
-           else
-             (match cls with
-              | 1 -> Coast_line g
-              | 2 -> Water_line g
-              | 3 -> Water_fill [ g ]
-              | 4 -> Road ("trunk", g)
-              | 5 -> Road ("primary", g)
-              | _ -> Road ("secondary", g))
-             :: acc)
-         [] (world_bin_all cache_dir which))
+      (memoize world_bin_features_cache key
+         (fun () ->
+           Array.fold_left
+             (fun acc (cls, s, w, n, e, g) ->
+               if e < r.west || w > r.east || n < r.south || s > r.north then acc
+               else
+                 (match cls with
+                  | 1 -> Coast_line g
+                  | 2 -> Water_line g
+                  | 3 -> Water_fill [ g ]
+                  | 4 -> Road ("trunk", g)
+                  | 5 -> Road ("primary", g)
+                  | _ -> Road ("secondary", g))
+                 :: acc)
+             [] (world_bin_all cache_dir which)))
 
 let tag_value tags k = Option.value ~default:"" (List.assoc_opt k tags)
 
