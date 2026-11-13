@@ -260,3 +260,9 @@ svg.roughmap .shaded { fill: rgba(214, 165, 25, 0.30); }
 .related { opacity: 0.65; font-size: 0.9em; margin-top: 4ex; }
 @media print { .related { display: none; } }
 
+
+/* heading bars are light-gray (#dddddd) in BOTH themes, so heading text
+   and heading anchors must stay dark -- in dark mode a{color:#dddddd}
+   otherwise puts light-gray link text on the light-gray bar */
+h1, h2, h3, h4, h5 { color: #040404; }
+h1 a, h2 a, h3 a, h4 a, h5 a { color: #040404; background: none; }
