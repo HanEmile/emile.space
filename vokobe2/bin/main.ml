@@ -127,6 +127,7 @@ let () =
           map_cache_dir;
           collect_only;
           backlinks_op_used = false;
+          book_depth = 0;
         }
     in
     (* First pass: discover any headings emitted dynamically by queries.

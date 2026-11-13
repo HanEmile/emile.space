@@ -233,3 +233,12 @@ footer { margin-top: 3ex; }
 td.section { background-color: #bbbbbb; color: #000000; }
 span.green { background-color: #228B22; color: #ffffff; }
 td.year-group { padding-top: 1.5em; font-weight: bold; color: #888; font-size: 0.85em; border: none; }
+
+/* (book "tag") reading-mode pages */
+.book-toc { list-style: none; padding-left: 0; }
+.chapter { border-top: 1px dashed; margin-top: 3ex; }
+@media print {
+  header, nav, footer, .toc, .backlinks { display: none; }
+  .book-toc { page-break-after: always; }
+  .chapter { page-break-before: always; border: none; margin-top: 0; }
+}

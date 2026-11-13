@@ -59,6 +59,7 @@ let () =
         map_cache_dir = ".";
         collect_only = false;
         backlinks_op_used = false;
+        book_depth = 0;
       }
   in
   let contains = Vokobe2.Util.contains_substring in
@@ -141,5 +142,29 @@ Second paragraph.
   let html = Vokobe2.Render.render_body (ctx [broken] broken) broken.raw in
   assert (contains html "&lt;page&gt;");
   assert (not (contains html "\\n"));
+
+  (* (book "tag"): chapters ordered by published, self excluded,
+     chapter headings renumber independently *)
+  let ch_old = mk_page "ch-old" "(meta (tag \"story\") (published \"2024-01-01\"))\n\n# Old\n\nold text.\n" in
+  let ch_new = mk_page "ch-new" "(meta (tag \"story\") (published \"2025-01-01\"))\n\n# New\n\nnew text.\n" in
+  let book = mk_page "my-book" "(meta (tag \"story\") (published \"2026-01-01\"))\n\n# My Book\n\n(book \"story\")\n" in
+  let pages = [book; ch_new; ch_old] in
+  let html = Vokobe2.Render.render_body (ctx pages book) book.raw in
+  let index_of hay needle =
+    let n = String.length hay and m = String.length needle in
+    let rec go i =
+      if i + m > n then -1
+      else if String.sub hay i m = needle then i
+      else go (i + 1)
+    in
+    go 0
+  in
+  (* published 2024 chapter must sort before published 2025 *)
+  assert (index_of html "chapter-ch-old" > 0
+          && index_of html "chapter-ch-old" < index_of html "chapter-ch-new");
+  assert (contains html {|<a href="/ch-old">Old</a>|});
+  assert (contains html "old text." && contains html "new text.");
+  assert (not (contains html "chapter-my-book"));
+  assert (contains html {|<h1 id="old"|} && contains html {|<h1 id="new"|});
 
   print_endline "ok"

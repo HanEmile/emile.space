@@ -51,6 +51,9 @@ type context = {
   (* set when the page explicitly invokes (backlinks); render_html then
      skips the automatic backlink box to avoid a duplicate *)
   mutable backlinks_op_used : bool;
+  (* (book ...) chapter nesting depth; > 0 disables nested book ops so a
+     book can never include itself (directly or transitively) *)
+  book_depth : int;
 }
 
 let page_link (p : Page.page) : string = "/" ^ p.name
@@ -741,10 +744,74 @@ let render_backlinks (ctx : context) : string =
       in
       "<div class=\"backlinks\">Backlinks<br>\n" ^ String.concat "" items ^ "</div>"
 
+(* (book "tag"): an opt-in reading-mode page concatenating every visible
+   page tagged [tag], ordered by (published, name).  Chapters render
+   with a fresh heading state (own numbering) and link back to the
+   standalone page; nested books are disabled via ctx.book_depth so a
+   book can never include itself.  O(total chapter bytes); chapter
+   queries hit the cross-page query memo. *)
+(* render_body is defined far below (its block machinery sits after the
+   eval chain); books are only invoked via eval_call at runtime, long
+   after module load, so resolve it through this late reference. *)
+let render_body_late : (context -> string -> string) ref =
+  ref (fun _ _ -> "")
+
+let render_book (ctx : context) (tag : string) : string =
+  let date_key (p : Page.page) =
+    match List.assoc_opt "published" p.Page.attrs with
+    | Some (d :: _) -> d
+    | _ -> "9999-99-99"
+  in
+  let chapters =
+    ctx.pages
+    |> List.filter (fun (p : Page.page) ->
+           p.Page.name <> ctx.current.Page.name && List.mem tag (tags_of p))
+    |> List.sort (fun a b ->
+           compare (date_key a, a.Page.name) (date_key b, b.Page.name))
+  in
+  if chapters = [] then
+    Printf.sprintf {|<div class="map-error">no pages tagged "%s"</div>|}
+      (Util.html_escape tag)
+  else
+    let buf = Buffer.create 4096 in
+    Buffer.add_string buf "<div class=\"book\">\n<ul class=\"book-toc\">\n";
+    List.iteri
+      (fun i (p : Page.page) ->
+        Buffer.add_string buf
+          (Printf.sprintf "<li>%d. <a href=\"#chapter-%s\">%s</a></li>\n"
+             (i + 1) p.Page.name (Util.html_escape p.Page.title)))
+      chapters;
+    Buffer.add_string buf "</ul>\n";
+    List.iteri
+      (fun i (p : Page.page) ->
+        let headings = Heading.collect_headings p.Page.raw in
+        let cctx =
+          {
+            ctx with
+            current = p;
+            headings;
+            hstate = new_heading_state ();
+            book_depth = ctx.book_depth + 1;
+            backlinks_op_used = false;
+          }
+        in
+        let body = !render_body_late cctx p.Page.raw in
+        Buffer.add_string buf
+          (Printf.sprintf
+             {|<section class="chapter" id="chapter-%s">
+<h1 class="chapter-title">%d. <a href="/%s">%s</a></h1>
+%s</section>
+|}
+             p.Page.name (i + 1) p.Page.name (Util.html_escape p.Page.title)
+             body))
+      chapters;
+    Buffer.add_string buf "</div>\n";
+    Buffer.contents buf
+
 let known_inline_ops = [
   "nav"; "list-pages"; "toc"; "backlinks"; "site-name";
   "img"; "link"; "table"; "green"; "bold"; "em"; "code"; "quote"; "query"; "meta"; "details";
-  "location"; "map"
+  "location"; "map"; "book"
 ]
 
 (* S-expression interpreter: O(size of the sexp) plus the cost of each
@@ -771,7 +838,7 @@ and eval_item (ctx : context) (c : sexp) : string =
 and eval_call (ctx : context) (op : string) (args : sexp list) : string =
   (* first pass only: output-only ops render nothing (queries still run,
      so (group tag) headings are collected) *)
-  if ctx.collect_only && List.mem op ["nav"; "list-pages"; "toc"; "backlinks"; "map"]
+  if ctx.collect_only && List.mem op ["nav"; "list-pages"; "toc"; "backlinks"; "map"; "book"]
   then begin
     if op = "backlinks" then ctx.backlinks_op_used <- true;
     ""
@@ -787,6 +854,10 @@ and eval_call (ctx : context) (op : string) (args : sexp list) : string =
       ]
 
   | "toc", _ -> render_toc (ctx.headings @ ctx.hstate.dynamic_headings)
+
+  | "book", Atom tag :: _ ->
+      if ctx.book_depth > 0 then ""
+      else render_book ctx tag
 
   | "backlinks", _ ->
       ctx.backlinks_op_used <- true;
@@ -1208,6 +1279,8 @@ let render_body (ctx : context) (raw : string) : string =
 
 (* O(h + len body) plus one navbar query O(n * a); h = headings,
    n = pages, a = attrs/page.  Called once per page in the hot path. *)
+let _ = render_body_late := render_body
+
 let render_html (site_name : string) (ctx : context) (body : string) : string =
   let scope_style =
     match ctx.headings with
