@@ -1,8 +1,9 @@
 (meta
+  (date "")
   (tag "sport")
   (kind "sport")
   (published "2022-01-01")
-  (modified "2026-10-25")
+  (modified "2026-11-11")
   (author "Emile")
   (info "tag")
 )
@@ -16,5 +17,5 @@ Getting from A to B using the Wind.
   (sort "published" desc)
   (group year "published" desc)
   (cols ("Title" "title") ("Published" "published"))
-  (format table))|}
+  (format table))
 

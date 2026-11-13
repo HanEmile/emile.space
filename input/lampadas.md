@@ -2,7 +2,7 @@
   (date "")
   (tag "blog" "lisp")
   (published "2024-05-11")
-  (modified "2026-10-25")
+  (modified "2026-11-11")
   (author "Emile")
   (info "tag" "published")
 )

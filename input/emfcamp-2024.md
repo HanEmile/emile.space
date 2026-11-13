@@ -1,11 +1,11 @@
 (meta
   (tag "event" "emfcamp")
   (published "2024-06-01")
-  (modified "2026-09-29")
+  (modified "2026-11-11")
   (date "2024-05-30" "2024-06-02")
   (author "Emile")
   (info "tag" "date" "location")
-  (location "Eastnor" "UK")
+  (location "Eastnor" "United Kingdom")
 )
 
 # EMFCAMP 2024

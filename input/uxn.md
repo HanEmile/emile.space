@@ -1,7 +1,8 @@
 (meta
+  (date "")
   (tag "uxn")
   (published "2026-11-08")
-  (modified "2026-11-08")
+  (modified "2026-11-11")
   (author "Emile")
   (info "published" "tag"))
 

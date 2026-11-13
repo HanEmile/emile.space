@@ -2,7 +2,7 @@
   (date "")
   (tag "blog" "security" "r2wars")
   (published "2020-10-10")
-  (modified "2026-10-25")
+  (modified "2026-11-11")
   (author "Emile")
   (info "published" "tag"))
 

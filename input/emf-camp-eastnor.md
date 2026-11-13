@@ -1,11 +1,11 @@
 (meta
   (tag "event" "emfcamp")
   (published "2022-06-02")
-  (modified "2026-09-29")
+  (modified "2026-11-11")
   (date "2022-06-02" "2022-06-06")
   (author "Emile")
   (info "tag" "date" "location")
-  (location "Eastnor" "UK")
+  (location "Eastnor" "United Kingdom")
 )
 
 # Electromagneticfield Camp

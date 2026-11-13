@@ -2,7 +2,7 @@
   (date "")
   (tag "project" "game")
   (published "2019-01-01")
-  (modified "2026-10-25")
+  (modified "2026-11-11")
   (author "Emile")
   (info "tag")
 )

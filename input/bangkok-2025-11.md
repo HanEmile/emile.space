@@ -1,7 +1,7 @@
 (meta
-  (tag "event")
+  (tag "event" "asia" "asia-2025")
   (published "2026-09-28")
-  (modified "2026-10-18")
+  (modified "2026-11-10")
   (date "2025-11-15" "2025-11-18")
   (author "Emile")
   (info "tag" "date" "location")
@@ -11,4 +11,3 @@
 # Bangkok
 
 Part of the [2025 Asia Trip](https://emile.space/asia-2025).
-

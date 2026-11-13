@@ -2,7 +2,7 @@
   (date "")
   (tag "index")
   (published "2026-09-15")
-  (modified "2026-10-25")
+  (modified "2026-11-11")
   (author "Emile"))
 
 # emile.space

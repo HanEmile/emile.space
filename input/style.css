@@ -28,7 +28,7 @@
 
     nav a.active { color: #040404; background: #ffffff; }
     :not(pre) > code { background: #dddddd; padding: 0 0.3ex; }
-    svg.roughmap { background: #ffffff; }
+    svg.roughmap { background: #ffffff; --map-bg: #ffffff; }
 }
 @media (prefers-color-scheme: dark) {
     :root { --hl-fg: #040404; --hl-bg: #bbbbbb; }
@@ -59,7 +59,7 @@
 
     nav a.active { color: #dddddd; background: #040404; }
     :not(pre) > code { background: #1c1c1c; padding: 0 0.3ex; }
-    svg.roughmap { background: #040404; }
+    svg.roughmap { background: #040404; --map-bg: #040404; }
 }
 
 /* settings for mobile devices */
