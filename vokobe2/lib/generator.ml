@@ -642,14 +642,21 @@ let generate_on_this_day (pages : Page.page list) : Page.page option =
       let buf = Buffer.create 4096 in
       Buffer.add_string buf
         "# on this day\n\neverything that happened on a given day of the \
-         year, across all years.\n";
+         year, across all years.\n\n(toc)\n";
+      (* months as headings, days as subheadings *)
+      let current_month = ref 0 in
       List.iter
         (fun md ->
           let m, d =
             (int_of_string (String.sub md 0 2), int_of_string (String.sub md 3 2))
           in
+          if m <> !current_month then begin
+            current_month := m;
+            Buffer.add_string buf
+              (Printf.sprintf "\n## %s\n" month_names_full.(m - 1))
+          end;
           Buffer.add_string buf
-            (Printf.sprintf "\n## %s %d\n\n" month_names_full.(m - 1) d);
+            (Printf.sprintf "\n### %s %d\n\n" month_names_full.(m - 1) d);
           let ps = Hashtbl.find tbl md in
           (* dedupe multi-day events appearing in several days of the
              range; order newest first *)

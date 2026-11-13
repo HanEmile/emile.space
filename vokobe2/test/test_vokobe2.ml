@@ -191,7 +191,9 @@ Second paragraph.
   (match Vokobe2.Generator.generate_on_this_day
             (Vokobe2.Generator.add_date_range_str [ongoing]) with
    | Some p ->
-       assert (contains p.raw "## November 13" && contains p.raw "[Trip](/trip)")
+       assert (contains p.raw "(toc)");
+       assert (contains p.raw "## November\n" && contains p.raw "### November 13"
+               && contains p.raw "[Trip](/trip)")
    | None -> assert false);
 
   (* search pages: table of results, links carry :~:text= fragments *)
