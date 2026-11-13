@@ -243,12 +243,10 @@ span.green { background-color: #228B22; color: #ffffff; }
 td.year-group { padding-top: 1.5em; font-weight: bold; color: #888; font-size: 0.85em; border: none; }
 
 /* (book "tag") reading-mode pages */
-.book-toc { list-style: none; padding-left: 0; }
-.chapter { border-top: 1px dashed; margin-top: 3ex; }
+.chapter { margin-top: 3ex; }
 @media print {
   header, nav, footer, .toc, .backlinks { display: none; }
-  .book-toc { page-break-after: always; }
-  .chapter { page-break-before: always; border: none; margin-top: 0; }
+  .chapter { page-break-before: always; margin-top: 0; }
 }
 
 /* git archaeology line under the info bar (tools/git-history.py) */
@@ -262,6 +260,3 @@ svg.roughmap .shaded { fill: rgba(214, 165, 25, 0.30); }
 .related { opacity: 0.65; font-size: 0.9em; margin-top: 4ex; }
 @media print { .related { display: none; } }
 
-/* chapter titles link to the standalone page */
-.chapter h2 a[href^="/"]:last-child { opacity: 0.5; text-decoration: none; }
-@media print { .chapter h2 a[href^="/"]:last-child { display: none; } }
