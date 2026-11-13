@@ -23,10 +23,14 @@ fi
 echo "[ ] building ..."
 rm -rf output/
 
+# build once, then invoke the binary directly: skips dune exec's
+# rebuild-check and process wrapper on every run (exit codes and
+# stdout/stderr are forwarded identical to dune exec)
+GEN="cd vokobe2 && dune build bin/main.exe && ./_build/default/bin/main.exe ../input/ ../output/ emile.space $OFFLINE_ARG"
 if [ "$VERBOSE" = "1" ]; then
-  ./nixrun.sh "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG"
+  ./nixrun.sh "$GEN"
 else
-  ./nixrun.sh "cd vokobe2 && dune exec bin/main.exe -- ../input/ ../output/ emile.space $OFFLINE_ARG" 2>/dev/null
+  ./nixrun.sh "$GEN" 2>/dev/null
 fi
 
 chmod -R +r output/

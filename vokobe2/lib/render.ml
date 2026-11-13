@@ -1,6 +1,10 @@
 open Sexp
 
-(* cumulative profiling, printed by bin/main.ml when VOKOBE_PROFILE=1 *)
+(* cumulative profiling, printed by bin/main.ml when VOKOBE_PROFILE=1.
+   The ref bumps below are intentionally NOT locked: page rendering is
+   parallelized over domains and racing += loses some increments, i.e.
+   the reported totals/n are a racy lower bound.  Acceptable -- they are
+   diagnostics, not results. *)
 let prof_time = Util.prof_time
 
 let prof_query_t = ref 0.
@@ -270,15 +274,76 @@ let rec eval_filter (p : Page.page) (sx : sexp) : bool =
       not (eval_filter p sub)
   | _ -> false
 
+(* Cross-page query memoization.  Most (query ...) sexps -- navbar,
+   index tables -- are textually identical on every page yet were
+   re-evaluated per page and per render pass.  The cache is keyed on the
+   canonical sexp string (Roughmap.sexp_key) and lives in a slot that,
+   like backlinks_cache, is keyed on the physical identity of the pages
+   list.  Two kinds of queries bypass the cache:
+   - any query containing a (group ...) directive: group queries emit
+     dynamic headings into ctx.hstate and MUST execute on every pass;
+   - queries whose result set contains the current page itself: the
+     list format marks it class="active", so the html is page-specific.
+     For all pages not in a query's result set its html is identical,
+     so the cache entry records the matched page names and a lookup by
+     a listed page recomputes (and is not stored back). *)
+type query_cache_entry = { qc_html : string; qc_names : string list }
+
+let query_cache :
+    (Page.page list * (string, query_cache_entry) Hashtbl.t) option ref =
+  ref None
+
+(* parallel page rendering shares the table: serialize probe+replace *)
+let query_cache_lock = Mutex.create ()
+
+let with_query_cache_lock f =
+  Mutex.lock query_cache_lock;
+  Fun.protect f ~finally:(fun () -> Mutex.unlock query_cache_lock)
+
+let query_cache_table (pages : Page.page list) =
+  match !query_cache with
+  | Some (key, tbl) when key == pages -> tbl
+  | Some _ | None ->
+      let tbl = Hashtbl.create 64 in
+      query_cache := Some (pages, tbl);
+      tbl
+
 (* The query engine.  Complexity over n = pages with a = attrs/page:
    filtering O(n * a), sorting O(n log n) comparisons with an O(a) raw
    attr lookup each, each emitted row O(cols * a).  Grouping adds:
    group_by_key/field O(n) (see group_by_key),
    group-by-tag O(t * n) for t = tag sections (one filter pass per tag)
    plus O(t) dynamic-heading appends.  Output string built in one concat. *)
-let render_query (ctx : context) (args : sexp list) : string =
+let rec render_query (ctx : context) (args : sexp list) : string =
   incr prof_query_n;
   prof_time prof_query_t @@ fun () ->
+  (* queries with any (group ...) clause have heading side effects into
+     ctx.hstate (see below): never memoized, executed every pass *)
+  let has_group =
+    List.exists (function List (Atom "group" :: _) -> true | _ -> false) args
+  in
+  let memo =
+    if has_group then None
+    else
+      let tbl = query_cache_table ctx.pages in
+      Some (Roughmap.sexp_key (List args), tbl)
+  in
+  let hit =
+    match memo with
+    | Some (key, tbl) -> (
+        match with_query_cache_lock (fun () -> Hashtbl.find_opt tbl key) with
+        | Some e when not (List.mem ctx.current.name e.qc_names) ->
+            Some e.qc_html
+        | Some _ | None -> None)
+    | None -> None
+  in
+  match hit with
+  | Some html -> html
+  | None -> render_query_compute ctx args memo
+
+and render_query_compute (ctx : context) (args : sexp list)
+    (memo : (string * (string, query_cache_entry) Hashtbl.t) option) :
+    string =
   let where_cond = ref (Atom "true") in
   let sort_key = ref "" in
   let sort_desc = ref false in
@@ -332,8 +397,9 @@ let render_query (ctx : context) (args : sexp list) : string =
     else matched
   in
 
-  match !format_mode with
-  | "list" ->
+  let result =
+    match !format_mode with
+    | "list" ->
       let items =
         List.map
           (fun p ->
@@ -471,6 +537,28 @@ let render_query (ctx : context) (args : sexp list) : string =
           sections)
       end
       else "<table>\n" ^ header_html ^ String.concat "" rows_html ^ "</table>"
+  in
+  (* store only context-independent html: the list format marks the
+     current page class="active", so a page listed by its own query
+     result recomputes every time and is not cached *)
+  (match memo with
+   | Some (key, tbl) ->
+       let current_listed =
+         !format_mode = "list"
+         && List.exists
+              (fun (p : Page.page) -> p.Page.name = ctx.current.name)
+              sorted
+       in
+       if not current_listed then
+         with_query_cache_lock (fun () ->
+             Hashtbl.replace tbl key
+               {
+                 qc_html = result;
+                 qc_names =
+                   List.map (fun (p : Page.page) -> p.Page.name) sorted;
+               })
+   | None -> ());
+  result
 
 (* O(n * a): delegates to one tag-filtered query over all n pages. *)
 let render_navbar (ctx : context) : string =

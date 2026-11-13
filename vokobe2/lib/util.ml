@@ -19,8 +19,12 @@ let write_file (path : string) (content : string) : unit =
   output_string oc content;
   close_out oc
 
+(* Tolerates concurrent calls for the same path from parallel page
+   renders: a losing mkdir (EEXIST, reported as Sys_error) is fine --
+   the directory exists, which is all we need. *)
 let ensure_dir (path : string) : unit =
-  if not (Sys.file_exists path) then Sys.mkdir path 0o755
+  if not (Sys.file_exists path) then
+    try Sys.mkdir path 0o755 with Sys_error _ -> ()
 
 (* O(H * N) worst case; H = hay length, N = needle length (naive scan
    with a String.sub + compare per position). *)

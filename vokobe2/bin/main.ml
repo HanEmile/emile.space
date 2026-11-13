@@ -144,12 +144,53 @@ let () =
     Util.write_file out_path html
   in
 
-  prof_time "render_all" (fun () ->
-      List.iter (render_page all_visible) all_visible;
-      (* Hidden pages are rendered with the visible context so their own
-         queries work, but they don't appear in any listing themselves. *)
-      List.iter (render_page all_visible) hidden_pages)
-  |> ignore;
+  (* Number of worker domains for page rendering: VOKOBE_JOBS overrides
+     (1 = the old sequential loop, for debugging), default is the
+     recommended domain count, capped at 8 -- pages are small and the
+     returns diminish quickly. *)
+  let njobs =
+    let from_env =
+      match Sys.getenv_opt "VOKOBE_JOBS" with
+      | Some s -> (try int_of_string (String.trim s) with _ -> 1)
+      | None -> min 8 (max 1 (Domain.recommended_domain_count ()))
+    in
+    max 1 from_env
+  in
+  (* Prewarm the shared backlinks cache single-threaded BEFORE spawning:
+     it is keyed on the pages-list identity and read-only afterwards, so
+     read-only Hashtbl access from multiple domains is then safe.  The
+     roughmap geodata/map caches are similarly warmed by gen_locations
+     above, and their own cold paths are mutex-guarded (see roughmap.ml). *)
+  ignore (Render.backlinks_of all_visible);
+  let render_pool =
+    (* output-file write order is irrelevant (each page writes its own
+       file), so visible and hidden pages share one work queue.
+       Per-page hstate/ctx are fresh per page, so heading ids and
+       numbering stay deterministic regardless of scheduling. *)
+    let pages = Array.of_list (all_visible @ hidden_pages) in
+    let n = Array.length pages in
+    fun () ->
+      if njobs = 1 then Array.iter (render_page all_visible) pages
+      else begin
+        let next = Atomic.make 0 in
+        let rec work () =
+          let i = Atomic.fetch_and_add next 1 in
+          if i < n then begin
+            render_page all_visible pages.(i);
+            work ()
+          end
+        in
+        (* njobs - 1 extra domains; the main domain works too *)
+        let domains =
+          List.init (njobs - 1) (fun _ -> Domain.spawn work)
+        in
+        work ();
+        List.iter Domain.join domains
+      end
+  in
+  (* Hidden pages are rendered with the visible context (all_visible) so
+     their own queries work, but they don't appear in any listing. *)
+  prof_time "render_all" render_pool |> ignore;
   Printf.printf "wrote %d html files\n%!" (List.length all_visible + List.length hidden_pages);
 
   (* RSS feed of the blog posts (tag "blog"), same selection as /blog *)
@@ -159,6 +200,7 @@ let () =
   if Sys.getenv_opt "VOKOBE_PROFILE" = Some "1" then begin
     let prof = Printf.eprintf in
     prof "[prof] ------------------------\n%!";
+    prof "[prof] jobs:          %6d     (render pool)\n%!" njobs;
     prof "[prof] queries:      %6.2fs  (%d calls)\n%!"
       !Render.prof_query_t !Render.prof_query_n;
     prof "[prof] navbar:       %6.2fs\n%!" !Render.prof_navbar_t;
