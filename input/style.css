@@ -271,3 +271,9 @@ h1, h2, h3, h4, h5 { color: #040404; }
 @media (prefers-color-scheme: dark) {
   h1 a, h2 a, h3 a, h4 a, h5 a { color: #dddddd; background: #040404; }
 }
+
+/* chapter title bars (number self-anchor + standalone-page link): flex
+   makes the chips stretch to the bar's full height and drops the
+   whitespace text node between them (kills the 1px lines) */
+.chapter h2 { display: flex; }
+.chapter h2 a { display: inline-block; }
