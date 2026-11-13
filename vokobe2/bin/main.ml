@@ -55,28 +55,6 @@ let () =
      is created on first use (see Roughmap.load_region_json). *)
   let map_cache_dir = Filename.concat input_dir "../map-cache" in
 
-  (* optional git archaeology (tools/git-history.py, run by publish.sh):
-     page name -> (created, modified, n_edits); absent in bare builds *)
-  let history : (string, int * int * int) Hashtbl.t = Hashtbl.create 384 in
-  let history_path = Filename.concat input_dir "../history.json" in
-  if Sys.file_exists history_path then begin
-    let json = Json.parse (Util.read_file history_path) in
-    (match json with
-     | Json.Obj entries ->
-         List.iter
-           (fun (name, j) ->
-             match
-               ( Json.(get_float "created" j),
-                 Json.(get_float "modified" j),
-                 Json.(get_float "edits" j) )
-             with
-             | Some c, Some m, Some e ->
-                 Hashtbl.replace history name
-                   (int_of_float c, int_of_float m, int_of_float e)
-             | _ -> ())
-           entries
-     | _ -> ())
-  end;
 
   let loaded_pages =
     prof_time "load_pages" (fun () ->
@@ -180,7 +158,6 @@ let () =
           backlinks_op_used = false;
           book_depth = 0;
           heading_offset = 0;
-          history;
           feed =
             (match Hashtbl.find_opt feed_of_page page.Page.name with
              | Some file -> Some (file, page.Page.name)

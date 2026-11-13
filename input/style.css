@@ -249,10 +249,6 @@ td.year-group { padding-top: 1.5em; font-weight: bold; color: #888; font-size: 0
   .chapter { page-break-before: always; margin-top: 0; }
 }
 
-/* git archaeology line under the info bar (tools/git-history.py) */
-.history { opacity: 0.6; font-size: 0.9em; margin: 0.5ex 0; }
-@media print { .history { display: none; } }
-
 /* (fill "Country") shading on roughmaps */
 svg.roughmap .shaded { fill: rgba(214, 165, 25, 0.30); }
 

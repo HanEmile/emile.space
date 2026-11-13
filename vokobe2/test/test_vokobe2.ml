@@ -61,7 +61,6 @@ let () =
         backlinks_op_used = false;
         book_depth = 0;
         heading_offset = 0;
-        history = Hashtbl.create 4;
         feed = None;
       }
   in
