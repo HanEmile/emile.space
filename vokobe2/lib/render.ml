@@ -691,6 +691,9 @@ let build_backlinks (pages : Page.page list) : backlinks =
   in
   List.iter
     (fun (p : Page.page) ->
+      (* generated search result pages link to hundreds of pages; they
+         are navigation, not references -- keep them out of backlinks *)
+      if not (String.starts_with ~prefix:"search-" p.Page.name) then begin
       let seen : (string, unit) Hashtbl.t = Hashtbl.create 16 in
       let raw = p.Page.raw in
       let len = String.length raw in
@@ -708,11 +711,13 @@ let build_backlinks (pages : Page.page list) : backlinks =
          | None -> ());
         scan_line p seen !anchor line;
         pos := line_end + 1
-      done)
+      done
+      end)
     pages;
   (* buckets were built by prepending; restore page-list order *)
   Hashtbl.filter_map_inplace (fun _ ps -> Some (List.rev ps)) edges;
   edges
+
 let backlinks_of (pages : Page.page list) : backlinks =
   match !backlinks_cache with
   | Some (key, edges) when key == pages -> edges

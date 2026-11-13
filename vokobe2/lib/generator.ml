@@ -780,8 +780,11 @@ let tokenize (raw : string) : (string, int) Hashtbl.t =
   counts
 
 (* first raw line containing [tok] (case-insensitive), parens replaced so
-   snippets can never be parsed as s-expressions, capped at 120 chars *)
-let snippet_of (tok : string) (raw : string) : string =
+   snippets can never be parsed as s-expressions, capped at 120 chars.
+   Also returns the disambiguation prefix for the text-fragment link:
+   the stripped words immediately before the token's first occurrence --
+   the browser highlights the snippet's instance, not the page's first. *)
+let snippet_of (tok : string) (raw : string) : string * string option =
   let n = String.length raw in
   let tl = String.length tok in
   let contains_at i =
@@ -791,6 +794,11 @@ let snippet_of (tok : string) (raw : string) : string =
     in
     i + tl <= n && go 0
   in
+  let clean s =
+    s
+    |> String.map (fun c -> if c = '(' then '[' else if c = ')' then ']' else c)
+    |> strip_markdown |> String.trim
+  in
   let rec find_line pos =
     if pos >= n then None
     else
@@ -799,22 +807,58 @@ let snippet_of (tok : string) (raw : string) : string =
         | Some nl -> nl
         | None -> n
       in
-      let rec found i = i < stop && (contains_at i || found (i + 1)) in
-      if found pos then Some (pos, stop) else find_line (stop + 1)
+      let rec found i =
+        if i < stop && contains_at i then Some i
+        else if i + 1 < stop then found (i + 1)
+        else None
+      in
+      match found pos with
+      | Some i0 -> Some (pos, stop, i0)
+      | None -> find_line (stop + 1)
   in
   match find_line 0 with
-  | None -> ""
-  | Some (pos, stop) ->
+  | None -> ("", None)
+  | Some (pos, stop, i0) ->
       let s =
-        String.sub raw pos (min 120 (stop - pos))
-        |> String.map (fun c ->
-               if c = '(' then '[' else if c = ')' then ']' else c)
-        |> strip_markdown |> String.trim
+        clean (String.sub raw pos (min 120 (stop - pos)))
       in
-      (* drop leftover list markers *)
-      if String.starts_with ~prefix:"- " s then
-        String.sub s 2 (String.length s - 2)
-      else s
+      let s =
+        (* drop leftover list markers *)
+        if String.starts_with ~prefix:"- " s then
+          String.sub s 2 (String.length s - 2)
+        else s
+      in
+      let prefix =
+        match clean (String.sub raw pos (i0 - pos)) with
+        | "" -> None
+        | p ->
+            let p =
+              (* text fragments allow ~-40 char prefixes; keep the tail,
+                 starting on a word boundary *)
+              let len = String.length p in
+              if len <= 24 then p
+              else
+                let tail = String.sub p (len - 24) 24 in
+                match String.index_opt tail ' ' with
+                | Some sp ->
+                    String.sub tail (sp + 1) (String.length tail - sp - 1)
+                | None -> tail
+            in
+            if String.trim p = "" then None else Some p
+      in
+      (s, prefix)
+
+(* percent-encode a text-fragment component (spec: anything but
+   alphanumeric is %XX, including '-' and spaces) *)
+let frag_encode (s : string) : string =
+  let b = Buffer.create (String.length s) in
+  String.iter
+    (fun c ->
+      match c with
+      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' -> Buffer.add_char b c
+      | c -> Buffer.add_string b (Printf.sprintf "%%%02X" (Char.code c)))
+    s;
+  Buffer.contents b
 
 (* per token: one "search-TOKEN" page listing the pages it appears on,
    name-match first, then by occurrence count *)
@@ -876,10 +920,20 @@ let generate_search_pages (pages : Page.page list) : Page.page list =
         Buffer.add_string buf "(table\n  (header \"page\" \"hits\" \"context\")\n";
         List.iter
           (fun (p, cnt) ->
-            let snip = snippet_of tok p.Page.raw in
+            let snip, prefix = snippet_of tok p.Page.raw in
+            (* prefixed directive highlights the snippet's instance; the
+               bare-token second directive is the fallback (page's first
+               instance) when rendered/raw text disagrees *)
+            let frag =
+              match prefix with
+              | Some pre ->
+                  Printf.sprintf "#:~:text=%s-,%s&text=%s" (frag_encode pre)
+                    tok tok
+              | None -> Printf.sprintf "#:~:text=%s" tok
+            in
             Buffer.add_string buf
-              (Printf.sprintf "  (row (link \"/%s#:~:text=%s\" \"%s\") \"%d\" \"%s\")\n"
-                 p.Page.name tok (Sexp.escaped_str p.Page.title) cnt
+              (Printf.sprintf "  (row (link \"/%s%s\" \"%s\") \"%d\" \"%s\")\n"
+                 p.Page.name frag (Sexp.escaped_str p.Page.title) cnt
                  (Sexp.escaped_str snip)))
           shown;
         Buffer.add_string buf ")\n";

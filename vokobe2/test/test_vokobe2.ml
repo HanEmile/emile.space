@@ -207,6 +207,20 @@ Second paragraph.
   assert (contains rendered "<table>");
   assert (contains rendered {|<a href="/nixctf#:~:text=nixos"|});
   assert (contains rendered {|<a href="/nixops#:~:text=nixos"|});
+  (* prefixed fragments target the snippet's instance; search- pages
+     never produce backlinks *)
+  let p3 = mk_page "nixguide" "# guide\n\nI really love nixos nixos nixos nixos.\n" in
+  (match Vokobe2.Generator.generate_search_pages [p1; p2; p3] with
+   | q :: _ ->
+       let r = Vokobe2.Render.render_body (ctx [q; p1; p2; p3] q) q.raw in
+       assert (contains r "text=I%20really%20love-,nixos&amp;text=nixos")
+   | [] -> assert false);
+  let search_page =
+    mk_page "search-foo" "# search\n\nsee [notes](/nixctf)\n"
+  in
+  let bl =
+    Vokobe2.Render.render_backlinks (ctx [p1; search_page] p1) in
+  assert (not (contains bl "/search-foo"));
   (* nixctf (5 hits) ranks before nixops (4 hits) *)
   let io hay needle =
     let n, m = (String.length hay, String.length needle) in
