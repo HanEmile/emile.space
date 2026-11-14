@@ -16,7 +16,7 @@ For [blinry's](https://morr.cc) amazing [glitch gallery](https://glitchgallery.o
 [No Vectors' Land](https://glitchgallery.org/no-vectors-land/)
 ![](/glitch-gallery-no-vectors-land.png)
 
-## subdivions
+## subdivisions
 
 [Subdivision](https://glitchgallery.org/subdivision/)
 ![](/glitch-gallery-subdivision.png)

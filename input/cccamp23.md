@@ -46,6 +46,6 @@ milliways workshop dome
 
 - [github.com/HanEmile/r2wars](https://github.com/HanEmile/r2wars)
 - [slides (nice html export)](.r2wars_GPN21/presentation.htm)
-- [slides (weird pdf pdf)](r2wars_GPN21.pdf)
+- [slides (weird pdf)](r2wars_GPN21.pdf)
 - [r2wars blogpost mit vielen infos](/r2wars)
 

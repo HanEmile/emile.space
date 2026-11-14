@@ -10,7 +10,7 @@
 
 # Munich
 
-Was in munich, was nice, would reccomend
+Was in munich, was nice, would recommend
 
 - muccc is great
 - I'll have to inspect the "Eisbach" wave some more

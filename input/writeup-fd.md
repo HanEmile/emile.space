@@ -91,7 +91,7 @@ This is the definition of the main function with some code checking if the right
 ```
 
 
-Now this get's interesting: The first command line argument (argv[1]) is passed to atoi (execute man atoi for more information on atoi). In a nutshell, atoi converts out input to an integer (Ascii TO Integer) and then subtracts 0x1234 from it. This means that we can controll the content of the fd variable: If we want to insert a value n into the var, we insert n + 0x1234.
+Now this get's interesting: The first command line argument (argv[1]) is passed to atoi (execute man atoi for more information on atoi). In a nutshell, atoi converts out input to an integer (Ascii TO Integer) and then subtracts 0x1234 from it. This means that we can control the content of the fd variable: If we want to insert a value n into the var, we insert n + 0x1234.
 
 
 ```
@@ -121,7 +121,7 @@ From the manpage:
 
 "[...] read() attempts to read up to count bytes from file descriptor fd into the buffer starting at buf."
 
-This means that the the address of the buffer defined in the beginning ist passed in, some file descriptor that should be read from (remember, we controll the number of that file descriptor) and the amount of bytes to read in (in this case 32).
+This means that the address of the buffer defined in the beginning ist passed in, some file descriptor that should be read from (remember, we control the number of that file descriptor) and the amount of bytes to read in (in this case 32).
 
 As we control the file descriptor, we can read 32 bytes of data from an arbitrary file descriptor into the buffer.
 
@@ -151,7 +151,7 @@ This checks if the content of the buffer is LETMEWIN. If so, it prints the conte
 
 ## Solving the challenge
 
-Now that you've got a basic understanding of the binary, it shouldn't be to hard to find out how to solve this. In the end, we need to get the String LETMEWIN into the buffer and the only thing we can controll is the input and the file descriptor from where the content is copied into the buffer.
+Now that you've got a basic understanding of the binary, it shouldn't be to hard to find out how to solve this. In the end, we need to get the String LETMEWIN into the buffer and the only thing we can control is the input and the file descriptor from where the content is copied into the buffer.
 
 The "most common" file descriptors are 0, 1 and 2. You might want to read the [wikipedia page on file descriptors](https://en.wikipedia.org/wiki/File_descriptor) in order to get a basic understanding of what this actually all means.
 

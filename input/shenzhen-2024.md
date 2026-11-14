@@ -18,8 +18,8 @@ Took the 18 min train from Hong Kong to Shenzhen
 G6568
 ```
 
-Metup with D_K and localo at the hotel
+Met up with D_K and localo at the hotel
 
-Walked around the SEG buildings looking at the electronics being sold. They had a whole street full of vendors showing off their reels of SDM components, pure paradise.
+Walked around the SEG buildings looking at the electronics being sold. They had a whole street full of vendors showing off their reels of SMD components, pure paradise.
 
 [Asia 2024 Trip](/asia-2024)

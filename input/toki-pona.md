@@ -212,7 +212,7 @@ The words are extracted from [this](https://raw.githubusercontent.com/baisong/to
 ### pu (the book)
 ### sama (same)
 ### seli (fire)
-### senlo (skin)
+### selo (skin)
 ### seme (what)
 ### sewi (high)
 ### sijelo (form)
@@ -231,10 +231,10 @@ The words are extracted from [this](https://raw.githubusercontent.com/baisong/to
 ### supa (table)
 ### suwi (sweet)
 ### tan (from)
-### taso (butt)
+### taso (but/however)
 ### tawa (to)
 ### telo (water)
-### tempo (time)
+### tenpo (time)
 
 ---
 
@@ -244,7 +244,7 @@ The words are extracted from [this](https://raw.githubusercontent.com/baisong/to
 ### unpa (sex)
 ### uta (mouth)
 ### utala (fight)
-### whalo (white)
+### walo (white)
 ### wan (one)
 ### waso (bird)
 ### wawa (strong)

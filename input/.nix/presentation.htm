@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base href="@@base@@" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, height=device-height, initial-scale=1" />
+    <link rel="stylesheet" href="engine/main.css" />
+    <link rel="stylesheet" href="theme/sanfrancisco.css" />
+    <link rel="stylesheet" href="engine/katex/katex.min.css" />
+    <!--<link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />-->
+    <style>
+    :root{
+--logo: ;
+--darkaccent1color: #fff;
+--lightaccent1color: #fff;
+--accent2: #43aa8b;
+--accent3: #f9c74f;
+--accent4: #90be6d;
+--accent5: #f8961e;
+--accent6: #577590;
+--lighttitletextcolor: #fff;
+--darktitletextcolor: #fff;
+--lightbodytextcolor: #fff;
+--darkbodytextcolor: #fff;
+--lightbackgroundcolor: transparent;
+--darkbackgroundcolor: transparent;
+--bodyfont: ui-monospace;
+--titlefont: system-ui;
+} 
+
+    </style>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="engine/print.css"
+      media="print"
+    />
+  </head>
+
+  <body class="responsive">
+    <div class="reveal">
+      <div class="slides"><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#00a8ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="nix-einspannendesÖkosystem">Nix - ein spannendes Ökosystem</h1>
+
+<h4 id="emile.spaceevents202304-easterhegg"><a href="https://emile.space/events/2023/04-easterhegg/">emile.space/events/2023/04-easterhegg/</a></h4></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#137aff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="dontpanic">DON'T PANIC!</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light grid-container present fit-warning has-dark-background fitted" data-background-color="#264dff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-grid grid-items-3" style="width: 100%; font-size: 0.672rem;">
+        <div style=""><h2 id="nixistkeinbetriebssystem.dielinuxdistrobasierendaufnixistnixos.">Nix ist kein Betriebssystem. Die Linux Distro basierend auf Nix ist NixOS.</h2></div><div style=""><h2 id="nixistkeinesprache.diespracheindernixosundnixpkgsgeschriebensindistdienixlanguage”.">Nix ist keine Sprache. Die Sprache in der NixOS und Nixpkgs geschrieben sind, ist die "Nix language”.</h2></div><div style=""><h2 id="dassnixeinpaketmanagerseiistzumindeststrittig">Dass Nix ein Paketmanager sei, ist zumindest strittig</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+</section><section class="variable-size-headings light cover-container present fit-warning has-dark-background fitted" data-background-color="#382cff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 0.531rem;">
+        <div style=""><h1 id="nixlanguage">nix Language</h1>
+
+<h3 id="https:nix.devtutorialsnix-language"><a href="https://nix.dev/tutorials/nix-language">https://nix.dev/tutorials/nix-language</a></h3>
+
+<h3 id="https:nixos.orgmanualnixstablelanguageindex.html"><a href="https://nixos.org/manual/nix/stable/language/index.html">https://nixos.org/manual/nix/stable/language/index.html</a></h3>
+
+<h3 id="https:github.comtazjinnix-1p"><a href="https://github.com/tazjin/nix-1p">https://github.com/tazjin/nix-1p</a></h3></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#4a13ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="nixpackagemanager">nix (Package manager)</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#5c00ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="nixos">NixOS</h1>
+
+<h4 id="einedistributionbasierendaufnix">Eine Distribution basierend auf Nix</h4></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#6d00ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="nixpkgspackagerepository">nixpkgs (Package repository)</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light full-image-container present has-dark-background fitted" data-background-color="#7f00ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-full-image media-grid" style="width: 100%; font-size: 1rem;">
+        <div style=""><div class="single-image-wrapper"><img src="images/Clipboard_1.png" class=" position-center-center"></div></div>
+        
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+</section><section class="variable-size-headings light cover-container present fit-warning has-dark-background fitted" data-background-color="#9500ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 0.578rem;">
+        <div style=""><h1 id="lotsofblogs">Lot's of Blogs!</h1>
+
+<h2 id="https:www.tweag.ioblog"><a href="https://www.tweag.io/blog/">https://www.tweag.io/blog/</a></h2>
+
+<h2 id="https:determinate.systemsposts"><a href="https://determinate.systems/posts">https://determinate.systems/posts</a></h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#ad00ff" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="flakes">flakes</h1>
+
+<h2 id="reproduciblebuilds">(Reproducible builds)</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light section-container present fit-warning has-dark-background fitted" data-background-color="#c300f9" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-section" style="width: 100%; font-size: 0.531rem;">
+        <div style="">
+          <h3 id="https:github.comhanemilelambdablobmainflake.nix"><a href="https://github.com/HanEmile/lambda/blob/main/flake.nix">https://github.com/HanEmile/lambda/blob/main/flake.nix</a></h3>
+        </div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#d400eb" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="hydra">hydra</h1>
+
+<h2 id="ci">(CI)</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light section-container present has-dark-background fitted" data-background-color="#e600de" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-section" style="width: 100%; font-size: 0.813rem;">
+        <div style="">
+          <h3 id="https:hydra.nixos.orgprojectnixpkgs"><a href="https://hydra.nixos.org/project/nixpkgs">https://hydra.nixos.org/project/nixpkgs</a></h3>
+        </div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#f003c4" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="colmenadeploy-rsnixes-rebuild">colmena, deploy-rs, nixes-rebuild</h1>
+
+<h2 id="deployment">(Deployment)</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light section-container present has-dark-background fitted" data-background-color="#fa06ab" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-section" style="width: 100%; font-size: 1rem;">
+        <div style="">
+          <h3 id="https:github.comchaos-jetztchaos-jetzt-nixfiles"><a href="https://github.com/chaos-jetzt/chaos-jetzt-nixfiles">https://github.com/chaos-jetzt/chaos-jetzt-nixfiles</a></h3>
+
+<h3 id="---">---</h3>
+
+<h3 id="https:chaos.jetzt"><a href="https://chaos.jetzt">https://chaos.jetzt</a></h3>
+        </div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#ff148d" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="handson">HANDS ON!</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-dark-background fitted" data-background-color="#ff276c" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="installiertmalnix">(Installiert mal nix!)</h1>
+
+<h3 id="https:nixos.orgdownload.html"><a href="https://nixos.org/download.html">https://nixos.org/download.html</a></h3></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present fit-warning has-dark-background fitted" data-background-color="#ff3a4d" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 0.531rem;">
+        <div style=""><h1 id="deinstallieren:">Deinstallieren:</h1>
+
+<h3 id="https:nixos.orgmanualnixstableinstallationinstalling-binary.htmlhighlightuninstalluninstalling"><a href="https://nixos.org/manual/nix/stable/installation/installing-binary.html?highlight=uninstall#uninstalling">https://nixos.org/manual/nix/stable/installation/installing-binary.html?highlight=uninstall#uninstalling</a></h3></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light section-container present has-dark-background fitted" data-background-color="#ff4935" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-section" style="width: 100%; font-size: 1rem;">
+        <div style="">
+          <h3 id="adhocshellenvironments">Ad hoc shell environments</h3>
+        </div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+</section><section class="variable-size-headings light default-container present fit-warning has-light-background fitted" data-background-color="#ff571d" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.719rem;">
+        <div style=""><pre><code class="bash hljs">; nix-shell -p go
+
+these 20 paths will be fetched (3.31 MiB download, 26.23 MiB unpacked):
+    /nix/store/26ry428qjd3bp5xs1dsfk9raq5pygslg-gnused-4.9
+    ...
+    /nix/store/z5xxcns3wkj9dbikarch3za5sybz5d65-gnu-config-2021-01-25
+copying path <span class="hljs-string">'/nix/store/vqa7bnaf9s2abd4bjmvygrgvkp6faav3-adv_cmds-119-locale'</span> from <span class="hljs-string">'https://cache.nixos.org'</span>...
+...
+copying path <span class="hljs-string">'/nix/store/8891kzjl7r6q5y6dsxadrn69vrbwygql-xz-5.4.1'</span> from <span class="hljs-string">'https://cache.nixos.org'</span>...
+
+[nix-shell:~]$
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light default-container present has-light-background fitted" data-background-color="#ff6710" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-default" style="width: 100%; font-size: 1rem;">
+        <div style=""><pre><code class="hljs ebnf"><span class="hljs-attribute">Flakes</span>
+</code></pre>
+
+<pre><code class="bash hljs">; git <span class="hljs-built_in">clone</span> https://github.com/HanEmile/lambda
+; <span class="hljs-built_in">cd</span> lambda
+; nix develop
+; python3 solve.py
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present has-light-background fitted" data-background-color="#ff7806" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="meetupsspezifischeproblemezusammenlösen">Meetups + Spezifische Probleme zusammen lösen</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light title-container present fit-warning has-light-background fitted" data-background-color="#ff8d00" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-title" style="width: 100%; font-size: 0.766rem;">
+        <div style=""><h2 id="https:nixos.wiki"><a href="https://nixos.wiki">https://nixos.wiki</a></h2>
+
+<h2 id="https:zero-to-nix.com"><a href="https://zero-to-nix.com">https://zero-to-nix.com</a></h2>
+
+<h2 id="https:nix.devtutorials"><a href="https://nix.dev/tutorials">https://nix.dev/tutorials</a></h2>
+
+<h2 id="https:nixos.orglearn.html"><a href="https://nixos.org/learn.html">https://nixos.org/learn.html</a></h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section><section class="variable-size-headings light cover-container present fit-warning has-light-background fitted" data-background-color="#ffa800" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 0.531rem;">
+        <div style=""><h1 id="emile.spaceevents202304-easterhegg"><a href="https://emile.space/events/2023/04-easterhegg/">emile.space/events/2023/04-easterhegg/</a></h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading"></div><div class="middle"></div><div class="trailing"></div></div>
+      
+</section></div>
+    </div>
+    <script src="engine/index.js"></script>
+    <!--<script src="engine/d3v4.min.js" charset="utf-8"></script>
+    <script src="engine/charts.min.js" charset="utf-8"></script>
+    <script src="engine/billboard.min.js"></script>-->
+    <script src="engine/pptxgen.min.js"></script>
+                                                   <script src="engine/pfill.js"></script>
+    <script src="engine/published.js"></script>
+
+    <script>
+      Reveal.configure({
+        progress: true,
+        keyboard: true,
+        dependencies: [
+          {
+            src: "engine/highlight.js",
+            sync: true,
+            callback: function () {
+              hljs.initHighlightingOnLoad();
+            },
+          },
+        ],
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base href="@@base@@" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, height=device-height, initial-scale=1" />
+    <link rel="stylesheet" href="engine/main.css" />
+    <link rel="stylesheet" href="theme/sanfrancisco.css" />
+    <link rel="stylesheet" href="engine/katex/katex.min.css" />
+    <!--<link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />-->
+    <style>
+    :root{
+--logo: ;
+--darkaccent1color: #fff;
+--lightaccent1color: #fff;
+--accent2: #43aa8b;
+--accent3: #f9c74f;
+--accent4: #90be6d;
+--accent5: #f8961e;
+--accent6: #577590;
+--lighttitletextcolor: #fff;
+--darktitletextcolor: #fff;
+--lightbodytextcolor: #fff;
+--darkbodytextcolor: #fff;
+--lightbackgroundcolor: transparent;
+--darkbackgroundcolor: transparent;
+--bodyfont: ui-monospace;
+--titlefont: system-ui;
+} 
+
+    </style>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="engine/print.css"
+      media="print"
+    />
+  </head>
+
+  <body class="responsive">
+    <div class="reveal">
+      <div class="slides"><section class="variable-size-headings has-header has-footer dark cover-container present has-dark-background fitted" data-background-color="#004b72" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="wirbauenwebfuzzer......inschnell">Wir bauen web fuzzer... ...in schnell</h1>
+
+<h4 id="https:emile.spaceevents202304-easterhegg"><a href="https://emile.space/events/2023/04-easterhegg/">https://emile.space/events/2023/04-easterhegg/</a></h4></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">1</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark cover-container present has-dark-background fitted" data-background-color="#0b3a7d" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="fuzzerwasndas">Fuzzer, wasn' das?</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">2</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark cover-container present has-dark-background fitted" data-background-color="#172988" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="golang">Golang</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">3</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark title-container present has-dark-background fitted" data-background-color="#211a8d" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-title" style="width: 100%; font-size: 1rem;">
+        <div style=""><h2 id="settingupaproject">Setting up a project</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">4</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present has-dark-background fitted" data-background-color="#2a0b8f" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 1rem;">
+        <div style=""><pre><code class="txt hljs plaintext">Getting started
+</code></pre>
+
+<pre><code class="hljs abnf"><span class="hljs-comment">; mkdir fuzz</span>
+<span class="hljs-comment">; cd fuzz</span>
+<span class="hljs-comment">; go mod init github.com/&lt;nick&gt;/fuzz</span>
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">5</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present has-dark-background fitted" data-background-color="#340091" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.906rem;">
+        <div style=""><pre><code class="txt hljs plaintext">Printing something (testing the setup)
+</code></pre>
+
+<pre><code class="go hljs"><span class="hljs-comment">// main.go</span>
+<span class="hljs-keyword">package</span> main
+
+<span class="hljs-keyword">import</span> (
+    <span class="hljs-string">"fmt"</span>
+)
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> {
+    fmt.Println(<span class="hljs-string">"Hello World!"</span>)
+}
+<span class="hljs-comment">// go run ./...</span>
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">6</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark title-container present has-dark-background fitted" data-background-color="#410096" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-title" style="width: 100%; font-size: 1rem;">
+        <div style=""><h2 id="makinganhttprequest">Making an HTTP request</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">7</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#4e009b" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.485rem;">
+        <div style=""><pre><code class="go hljs"><span class="hljs-keyword">package</span> main
+
+<span class="hljs-keyword">import</span> (
+        <span class="hljs-string">"fmt"</span>
+        <span class="hljs-string">"io"</span>
+        <span class="hljs-string">"net/http"</span>
+)
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> {
+        fmt.Println(<span class="hljs-string">"hello world"</span>)
+
+        resp, err := http.Get(<span class="hljs-string">"https://emile.space"</span>)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                fmt.Println(<span class="hljs-string">"Some error: "</span>, err)
+        }
+
+        <span class="hljs-keyword">defer</span> resp.Body.Close()
+
+        body, err := io.ReadAll(resp.Body)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                fmt.Println(<span class="hljs-string">"Some error: "</span>, err)
+        }
+
+        fmt.Println(body)
+}
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">8</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present has-dark-background fitted" data-background-color="#580097" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.813rem;">
+        <div style=""><pre><code class="txt hljs plaintext">The relevant parts of making an HTTP request
+</code></pre>
+
+<pre><code class="go hljs">    resp, err := http.Get(<span class="hljs-string">"http://example.com/"</span>)
+    <span class="hljs-keyword">defer</span> resp.Body.Close()
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// ...</span>
+    }
+
+    body, err := io.ReadAll(resp.Body)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// ...</span>
+    }
+
+    fmt.Println(<span class="hljs-keyword">string</span>(body))
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">9</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark title-container present has-dark-background fitted" data-background-color="#610090" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-title" style="width: 100%; font-size: 1rem;">
+        <div style=""><h2 id="readingafile">Reading a file</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">10</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present has-dark-background fitted" data-background-color="#690087" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.953rem;">
+        <div style=""><pre><code class="go hljs"><span class="hljs-keyword">import</span> (
+    <span class="hljs-string">"os"</span>
+    <span class="hljs-string">"strings"</span>
+)
+
+...
+
+    dat, err := os.ReadFile(<span class="hljs-string">"./wordlist.txt"</span>)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        <span class="hljs-comment">// ...</span>
+    }
+    fmt.Print(<span class="hljs-keyword">string</span>(dat))
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">11</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark title-container present has-dark-background fitted" data-background-color="#6e007b" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-title" style="width: 100%; font-size: 1rem;">
+        <div style=""><h2 id="combineit">Combine it!</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">12</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#73006f" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.672rem;">
+        <div style=""><pre><code class="go hljs">        <span class="hljs-comment">// read file</span>
+        dat, err := os.ReadFile(<span class="hljs-string">"./wordlist.txt"</span>)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+            fmt.Println(<span class="hljs-string">"Some error: "</span>, err)
+        }
+
+        words := strings.Split(<span class="hljs-keyword">string</span>(dat), <span class="hljs-string">"\n"</span>)
+
+        <span class="hljs-comment">// loop over words</span>
+        <span class="hljs-keyword">for</span> i, word := <span class="hljs-keyword">range</span> words {
+            fmt.Printf(<span class="hljs-string">"http request nr. %d to word %s "</span>, i, word)
+
+            url := fmt.Sprintf(<span class="hljs-string">"https://emile.space/%s"</span>, word)
+
+            <span class="hljs-comment">// make the request</span>
+            resp, err := http.Get(url)
+            ...
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">13</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark cover-container present has-dark-background fitted" data-background-color="#770061" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="speed">SPEED</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">14</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark title-container present has-dark-background fitted" data-background-color="#7b0053" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-title" style="width: 100%; font-size: 1rem;">
+        <div style=""><h2 id="cleanup:functions">Cleanup: Functions!</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">15</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#7c003e" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.719rem;">
+        <div style=""><pre><code class="go hljs"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">request</span><span class="hljs-params">(id <span class="hljs-keyword">int</span>, url <span class="hljs-keyword">string</span>)</span></span> {
+        resp, err := http.Get(url)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                fmt.Println(<span class="hljs-string">"Some error: "</span>, err)
+        }
+
+        <span class="hljs-keyword">defer</span> resp.Body.Close()
+
+        body, err := io.ReadAll(resp.Body)
+        <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+                fmt.Println(<span class="hljs-string">"Some error: "</span>, err)
+        }
+
+        fmt.Printf(<span class="hljs-string">"[%d] req to url %s (%d)\n"</span>, id, url, <span class="hljs-built_in">len</span>(body))
+}
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">16</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark cover-container present fit-warning has-dark-background fitted" data-background-color="#7c0024" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 0.625rem;">
+        <div style=""><h1 id="channel">"Channel"</h1>
+
+<h2 id="https:gobyexample.comchannels">https://gobyexample.com/channels</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">17</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#7e030e" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.531rem;">
+        <div style=""><pre><code class="go hljs"><span class="hljs-comment">// https://gobyexample.com/channel-synchronization</span>
+<span class="hljs-keyword">package</span> main
+
+<span class="hljs-keyword">import</span> (
+    <span class="hljs-string">"fmt"</span>
+    <span class="hljs-string">"time"</span>
+)
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">worker</span><span class="hljs-params">(done <span class="hljs-keyword">chan</span> <span class="hljs-keyword">bool</span>)</span></span> {
+    fmt.Print(<span class="hljs-string">"working..."</span>)
+    time.Sleep(time.Second)
+    fmt.Println(<span class="hljs-string">"done"</span>)
+    done &lt;- <span class="hljs-literal">true</span>
+}
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> {
+    done := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">bool</span>, <span class="hljs-number">1</span>)
+    <span class="hljs-keyword">go</span> worker(done)
+    
+    <span class="hljs-comment">// something else could be doing stuff here at the same time as the worker</span>
+    
+    &lt;-done
+}
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">18</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark cover-container present has-dark-background fitted" data-background-color="#8d1608" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 1rem;">
+        <div style=""><h1 id="usingthis">using this</h1></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">19</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#9b2901" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.672rem;">
+        <div style=""><pre><code class="go hljs">...
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">worker</span><span class="hljs-params">(wordChan <span class="hljs-keyword">chan</span> <span class="hljs-keyword">string</span>)</span></span> {
+    <span class="hljs-keyword">for</span> {
+        url := &lt;-wordChan
+        request(url)
+    }
+}
+...
+
+<span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> {
+    ...
+    wordChan := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">string</span>, <span class="hljs-number">10</span>)
+    <span class="hljs-keyword">for</span> i := <span class="hljs-number">1</span>; i &lt; <span class="hljs-number">4</span>; i++ {
+        <span class="hljs-keyword">go</span> worker(wordChan)
+    }
+    ...
+}
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">20</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#a03a00" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.625rem;">
+        <div style=""><pre><code class="go hljs"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">worker</span><span class="hljs-params">(id <span class="hljs-keyword">int</span>, wordChan <span class="hljs-keyword">chan</span> <span class="hljs-keyword">string</span>, doneChan <span class="hljs-keyword">chan</span> <span class="hljs-keyword">bool</span>)</span></span> {
+    out:
+    <span class="hljs-keyword">for</span> {
+        <span class="hljs-keyword">select</span> {
+        
+        <span class="hljs-keyword">case</span> url := &lt;-wordChan:
+            url = fmt.Sprintf(<span class="hljs-string">"https://emile.space/%s"</span>, url)
+            request(id, url)
+            
+        <span class="hljs-keyword">case</span> &lt;-time.After(<span class="hljs-number">3</span> * time.Second):
+            fmt.Printf(<span class="hljs-string">"worker %d couldn't get a new url after 3 seconds, quitting\n"</span>, id)
+            <span class="hljs-keyword">break</span> out
+            
+        }
+    }
+    doneChan &lt;- <span class="hljs-literal">true</span>
+}
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">21</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#a24a00" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.438rem;">
+        <div style=""><pre><code class="go hljs"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> {
+    <span class="hljs-comment">// read wordlist</span>
+    dat, err := os.ReadFile(<span class="hljs-string">"./wordlist1.txt"</span>)
+    <span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+        fmt.Println(<span class="hljs-string">"Some error: "</span>, err)
+    }
+
+    words := strings.Split(<span class="hljs-keyword">string</span>(dat), <span class="hljs-string">"\n"</span>)
+
+    <span class="hljs-comment">// create workers</span>
+    wordChan := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">string</span>, <span class="hljs-number">10</span>)
+    doneChan := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">bool</span>, <span class="hljs-number">4</span>)
+    <span class="hljs-keyword">for</span> i := <span class="hljs-number">1</span>; i &lt; <span class="hljs-number">4</span>; i++ {
+        <span class="hljs-keyword">go</span> worker(i, wordChan, doneChan)
+    }
+
+    <span class="hljs-comment">// fill word channel with all the words we want to fuzz</span>
+    fmt.Println(<span class="hljs-string">"Filling wordChan"</span>)
+    <span class="hljs-keyword">for</span> _, word := <span class="hljs-keyword">range</span> words {
+        wordChan &lt;- word
+    }
+
+    <span class="hljs-comment">// check that all the workers are done before ending</span>
+    <span class="hljs-keyword">for</span> i := <span class="hljs-number">1</span>; i &lt; <span class="hljs-number">4</span>; i++ {
+        &lt;-doneChan
+    }
+}
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">22</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark default-container present fit-warning has-dark-background fitted" data-background-color="#a25a00" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-default" style="width: 100%; font-size: 0.672rem;">
+        <div style=""><pre><code class="go hljs">    <span class="hljs-comment">// create workers</span>
+    wordChan := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">string</span>, <span class="hljs-number">10</span>)
+    doneChan := <span class="hljs-built_in">make</span>(<span class="hljs-keyword">chan</span> <span class="hljs-keyword">bool</span>, <span class="hljs-number">4</span>)
+    <span class="hljs-keyword">for</span> i := <span class="hljs-number">1</span>; i &lt; <span class="hljs-number">4</span>; i++ {
+        <span class="hljs-keyword">go</span> worker(i, wordChan, doneChan)
+    }
+
+    <span class="hljs-comment">// fill word channel with all the words we want to fuzz</span>
+    <span class="hljs-keyword">for</span> _, word := <span class="hljs-keyword">range</span> words {
+        wordChan &lt;- word
+    }
+    
+
+    <span class="hljs-comment">// check that all the workers are done before ending</span>
+    <span class="hljs-keyword">for</span> i := <span class="hljs-number">1</span>; i &lt; <span class="hljs-number">4</span>; i++ {
+        &lt;-doneChan
+    }
+</code></pre></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">23</div></div>
+      
+</section><section class="variable-size-headings has-header has-footer dark cover-container present fit-warning has-dark-background fitted" data-background-color="#9f6900" data-updated="true" style="display: grid;">
+
+      <div class="header"><div class="leading">08.04.23</div><div class="middle">Easterhegg 2023</div><div class="trailing">K1/3</div></div>
+      <div class="layout-cover" style="width: 100%; font-size: 0.485rem;">
+        <div style=""><h1 id="https:emile.spaceevents202304-easterhegg">https://emile.space/events/2023/04-easterhegg/</h1>
+
+<h2 id="daswarsvorerst">(Das war's vorerst)</h2></div>
+      </div>
+      <div class="footnotes"></div>
+      <div class="footer"><div class="leading">@hanemile</div><div class="middle">https://emile.space/events/2023/04-easterhegg/</div><div class="trailing">24</div></div>
+      
+</section></div>
+    </div>
+    <script src="engine/index.js"></script>
+    <!--<script src="engine/d3v4.min.js" charset="utf-8"></script>
+    <script src="engine/charts.min.js" charset="utf-8"></script>
+    <script src="engine/billboard.min.js"></script>-->
+    <script src="engine/pptxgen.min.js"></script>
+                                                   <script src="engine/pfill.js"></script>
+    <script src="engine/published.js"></script>
+
+    <script>
+      Reveal.configure({
+        progress: true,
+        keyboard: true,
+        dependencies: [
+          {
+            src: "engine/highlight.js",
+            sync: true,
+            callback: function () {
+              hljs.initHighlightingOnLoad();
+            },
+          },
+        ],
+      });
+    </script>
+  </body>
+</html>

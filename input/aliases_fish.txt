@@ -1,0 +1,15 @@
+function pmk --argument name
+    docker run --rm -v (pwd)':/pwn' --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name $name -i ctf:ubuntu20.10
+end
+
+function pcd --argument name
+    docker exec -it -e TERM=xterm-256color --workdir /pwn $name bash
+end
+
+function prm --argument name
+    docker stop $name
+end
+
+function pls
+    docker ps -a -f ancestor=ctf:ubuntu20.10 --format '{{.Names}}'
+end

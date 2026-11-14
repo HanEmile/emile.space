@@ -17,7 +17,7 @@ This post contains more written out notes regarding the [projects/plan9](/plan9-
 
 ## Introduction
 
-So I've been playing around with plan9 and I't been really fun, but running it in qemu ist just weird. I've had the chance to pick up some second hand raspberry pi's on ebay-kleinanzeigen which include the following:
+So I've been playing around with plan9 and It's been really fun, but running it in qemu ist just weird. I've had the chance to pick up some second hand raspberry pi's on ebay-kleinanzeigen which include the following:
 
 - 3x Raspberry Pi 1 A
 - 3x Raspberry Pi 1 B+ v1.2
@@ -27,7 +27,7 @@ and I've still got a Pi 4 1GB here. So overall: 8 pi's which will be wonderful f
 
 ## What?
 
-Imaging a network of computers in which you can use other computers resources more transparently. I'll write another blogpost as soon as I've read enough into it to be able to formulate it in a nice way. For now: It's an interesting form of distributed computing.
+Imagine a network of computers in which you can use other computers resources more transparently. I'll write another blogpost as soon as I've read enough into it to be able to formulate it in a nice way. For now: It's an interesting form of distributed computing.
 
 ## Why?
 

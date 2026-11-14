@@ -34,4 +34,4 @@ Running programmes simultaneously in the same memory: what could go wrong? This 
 - [github.com/hanemile/r2wars](https://github.com/hanemile/r2wars)
 - [r2wars blogpost (en) with a lot of info](/r2wars)
 - [pretalx page](https://talks.toorcon.net/toorcamp-2024/talk/PCZTZH/)
-- [GPN slides (weird pdf pdf)](/gpn23-r2wars_GPN21.pdf)
+- [GPN slides (weird pdf pdf)](/r2wars_GPN21.pdf)

@@ -26,7 +26,7 @@ Batter:
 * 370 g vegane Butter
 * 370 g Apfelmus
 
-40 min of 200º Umluft
+40 min at 200º Umluft
 
 Apples:
 
@@ -54,4 +54,4 @@ Apples:
 
 Oven:
 
-40 min of 180º Ober Unterhitze
+40 min at 180º Ober Unterhitze

@@ -12,4 +12,4 @@
 
 There was this "haxorcist CTF" in Bonn.
 
-We participated as [flexerilla](/flexerilla) (c0mp, two of his collegues and me) taking the 9th place (out of ~30 teams) which is ok for just a small fun CTF.
+We participated as [flexerilla](/flexerilla) (c0mp, two of his colleagues and me) taking the 9th place (out of ~30 teams) which is ok for just a small fun CTF.

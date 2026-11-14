@@ -19,34 +19,34 @@ All images from the [unifiber.net/windsurf-fins](https://www.unifiber.net/windsu
 
 Slalom fins ~25-50cm
 
-![](/windsurf-fin-powerbox.jpg)</img>
+![](/windsurf-fin-powerbox.jpg)
 
 ## US-Box
 
 Wave fins ~10-25cm
 
-![](/windsurf-fin-usbox.jpg)</img>
+![](/windsurf-fin-usbox.jpg)
 
 ## Trimbox
 
 idk
 
-![](/windsurf-fin-trimbox.jpg)</img>
+![](/windsurf-fin-trimbox.jpg)
 
 ## Slotbox
 
 Freestyle ~15-30cm
 
-![](/windsurf-fin-slotbox.jpg)</img>
+![](/windsurf-fin-slotbox.jpg)
 
 ## Tuttlebox
 
 Slalom fins ~25-50cm
 
-![](/windsurf-fin-tuttlebox.jpg)</img>
+![](/windsurf-fin-tuttlebox.jpg)
 
 ## Deep Tuttlebox
 
 Slalom + Foiling ~25-120cm
 
-![](/windsurf-fin-deeptuttlebox.jpg)</img>
+![](/windsurf-fin-deeptuttlebox.jpg)

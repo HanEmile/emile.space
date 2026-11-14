@@ -17,7 +17,7 @@ Malvern Hills AONB, A438, Eastnor, Ledbury, England
 
 [https://www.emfcamp.org](https://www.emfcamp.org)
 
-A wonderful event, I stayed with milliways and can highly reccomend that.
+A wonderful event, I stayed with milliways and can highly recommend that.
 
 People took quite a large amount of pictures that can be found on the [memories](https://wiki.emfcamp.org/wiki/Memories) page and by searching for the [#emfcamp2022](https://twitter.com/search?q=%23emfcamp2022&src=typeahead_click&f=top) hashtag on twitter.
 

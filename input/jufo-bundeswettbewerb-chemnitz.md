@@ -2,7 +2,7 @@
   (tag "event" "jufo")
   (published "2019-05-01")
   (modified "2026-09-23")
-  (date "2019-05-01")
+  (date "2019-05-16" "2019-05-19")
   (author "Emile")
   (info "tag" "date" "location")
   (location "Chemnitz" "Germany")

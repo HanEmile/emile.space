@@ -18,3 +18,5 @@
 - [2018-03 Obertauern](/ski-obertauern)
 - [2019-12 St. Anton](/ski-st-anton)
 - [2022-01 Fiss Ladis](/ski-fiss-ladis)
+- [2023-12 Ischgl](/ski-ishgl)
+- [2026-03 Arlberg](/ski-arlberg)

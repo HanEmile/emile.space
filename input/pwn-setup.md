@@ -48,7 +48,7 @@ cd .. && git clone https://github.com/pwndbg/pwndbg && cd pwndbg && ./setup.sh
 
 ## bash aliases
 
-These are the bash alieses you can use to create the containers.
+These are the bash aliases you can use to create the containers.
 
 
 ```

@@ -28,9 +28,8 @@ So we can use radare to take apart binaries, but using all the tools included, w
 
 ## What is r2wars?
 
-Over the last few days, I’ve played around with r2wars, a competition typically between two programs that try to survive as much time as possible in a shared memory space. A python implementation of r2wars can be found on github as well as a C# implementation.
 
-There exist similar forms of games such as [Core Wars](https://en.wikipedia.org/wiki/Core_War), but what makes r2wars different is that the bots can be built in any architecture supported by ESIL [Evaluable Strings Intermediate Language](https://radare.gitbooks.io/radare2book/content/disassembling/esil.html%22), more than 2 programs can run at the same time and cyclic execution cost matters for the turns.
+There exist similar forms of games such as [Core Wars](https://en.wikipedia.org/wiki/Core_War), but what makes r2wars different is that the bots can be built in any architecture supported by ESIL [Evaluable Strings Intermediate Language](https://radare.gitbooks.io/radare2book/content/disassembling/esil.html), more than 2 programs can run at the same time and cyclic execution cost matters for the turns.
 
 ## r2wars in detail
 
@@ -142,7 +141,7 @@ After placing the first bot at, for example, 0x40, the address space in which th
 ```
 
 
-This might not work the first time, for example when using the default example of two bots in a memory space 1024 bytes big, each bot has (in theory) 512 bytes of memory to position itself in. Doing this for n bots in x bytes of memory results in n / x bytes per bot. This gets more problematic with a greater amount of bots in a limited memory space.
+This might not work the first time, for example when using the default example of two bots in a memory space 1024 bytes big, each bot has (in theory) 512 bytes of memory to position itself in. Doing this for n bots in x bytes of memory results in x / n bytes per bot. This gets more problematic with a greater amount of bots in a limited memory space.
 
 ### Inserting bots
 
@@ -181,7 +180,7 @@ By dumping these registers, we can easily restore the state of the bot, by repla
 
 ## Executing an instruction
 
-After having created an "arena" and inserted a bot into the arena, we can execute an instruction, but before doing so, we still need to set up the"Progam Counter" (PC) and the "Stack Pointer" (SP) for the bot. We can do this by using the aer command, that can be used to manipulate the ESIL registers:
+After having created an "arena" and inserted a bot into the arena, we can execute an instruction, but before doing so, we still need to set up the"Program Counter" (PC) and the "Stack Pointer" (SP) for the bot. We can do this by using the aer command, that can be used to manipulate the ESIL registers:
 
 
 ```

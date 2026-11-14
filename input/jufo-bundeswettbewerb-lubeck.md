@@ -25,7 +25,7 @@ it was nice to see a few old faces.
 We started out at the "Alumni treff" in the "Dräger Garage". It's a "makespace"
 from Dräger which didn't really convince us: it just looked like they tried to
 build a hackspace without ever having been in a hackspace. There was a small
-talk, then some drinks and snacks and before we could relocated to the JuFo
+talk, then some drinks and snacks and before we could relocate to the JuFo
 Bundeswettbewerb.
 
 ### jufo bundeswettbewerb / musik und kongresshalle lübeck

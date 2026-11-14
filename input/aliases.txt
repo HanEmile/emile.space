@@ -1,0 +1,10 @@
+alias pmk='function _dockermk(){docker run -v "$(pwd):/pwn" \
+--cap-add=SYS_PTRACE --security-opt seccomp=unconfined -d --name $1 -i \
+ctf:ubuntu20.10;};_dockermk'
+
+alias pcd='function _dockercd(){docker exec -it --workdir /pwn $1 bash;};_dockercd'
+
+alias prm='function _dockerrm(){docker stop $1;};_dockerrm'
+
+alias pls='function _dockerls(){docker ps -a -f ancestor=ctf:ubuntu20.10 \
+--format "{{.Names}}";};_dockerls'

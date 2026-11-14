@@ -46,7 +46,7 @@ Medientheater
 
 [media.ccc.de recording](https://media.ccc.de/v/gpn21-22-vom-buffer-overflow-zur-shell)
 
-Hab das mit der "wir kommen wir am ende zur shell" irgendwie verballert... aber der ganze "wir kommen wir von einem buffer-overflow zu rip-control" scheint echt ganz gut funktioniert zu haben.
+Hab das mit der "wir kommen am ende zur shell" irgendwie verballert... aber der ganze "wir kommen von einem buffer-overflow zu rip-control" scheint echt ganz gut funktioniert zu haben.
 
 ### Links
 

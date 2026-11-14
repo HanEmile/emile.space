@@ -17,13 +17,13 @@ I don't know why, but I like to have complete control on how the page is built w
 
 In the end, I'd like to use the luno language I'm currently building to create this site. For this, I first need to build luno. Now we've got a problem: As the journey of building this language should be documented (or better: I want to document it), I need some intermediate solution for hosting the pages.
 
-An this is where interpaleki comes in.
+And this is where interpaleki comes in.
 
 ## structure
 
 Mainly, we've got one input directory and one output directory. The files from the input directory get converted to html and copied to the output directory.
 
-One of the main features of this page is the navigation. The generator takes into account tha path a page is in and goes through all children of that path and processes a list of their children. Integrating this into the UI makes it easy to jump to a lot of other pages from the page you're on.
+One of the main features of this page is the navigation. The generator takes into account the path a page is in and goes through all children of that path and processes a list of their children. Integrating this into the UI makes it easy to jump to a lot of other pages from the page you're on.
 
 For example, say your on the following page:
 
@@ -33,4 +33,4 @@ Hovering over one of the items shows all their children, so for example, we coul
 
 ## code
 
-The whole generator (as of writing this) consists of 225 lines of python3, of which 156 are code 30 lines of comments and 39 blank lines. Fairly small right?
+The whole generator (as of writing this) consists of 225 lines of python3, of which 156 are code and 30 are comments and 39 blank lines. Fairly small right?

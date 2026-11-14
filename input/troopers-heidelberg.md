@@ -8,7 +8,7 @@
   (location "Heidelberg" "Germany")
 )
 
-# TROOOPERS Conference
+# TROOPERS Conference
 
 I Filled out the student motivation letter form in their pretix and they
 accepted, so apparently, I'm going to heidelberg.

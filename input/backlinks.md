@@ -20,7 +20,7 @@ So, backlinks are just links from other pages to the page you are currently on. 
 
 ## setting up backlinks
 
-The algirithm can be quite simple:
+The algorithm can be quite simple:
 
 ```
 for file in files:
@@ -28,7 +28,7 @@ for file in files:
     append file.name to link.target.file
 ```
 
-So if we've got a file structure like the folliwing (with the links being indented):
+So if we've got a file structure like the following (with the links being indented):
 
 ```
 .

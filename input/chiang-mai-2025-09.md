@@ -12,4 +12,4 @@
 
 Part of the [2025 Asia Trip](https://emile.space/asia-2025).
 
-After the schock of Bangkok, the small silent streets of Chiang Mai were a real switch!
+After the shock of Bangkok, the small silent streets of Chiang Mai were a real switch!

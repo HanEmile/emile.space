@@ -10,4 +10,4 @@
 
 # Tenerife
 
-Second visit to this worderful place (El Médano). Went diving in Tabaiba (2x) and Abades (2x)
+Second visit to this wonderful place (El Médano). Went diving in Tabaiba (2x) and Abades (2x)

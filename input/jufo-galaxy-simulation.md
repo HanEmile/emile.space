@@ -13,7 +13,7 @@ After having generated multiple galaxies, I realized that it would be fun to do 
 
 ![](/jufo-galaxy-simulation-example_image_cropped.png)
 
-The image above shows two heavy masses in a field of stars. The direction of the force acting on the stars is dispalyed using the line pointing away from the individual star. The intensity of the force acting is depicted using colors (blue=low force, red=higher force).
+The image above shows two heavy masses in a field of stars. The direction of the force acting on the stars is displayed using the line pointing away from the individual star. The intensity of the force acting is depicted using colors (blue=low force, red=higher force).
 
 If you find this interesting and want to read a comprehensive introduction on how this works, you can read the [Paged Out!](/paged-out) article I wrote about this.
 

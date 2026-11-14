@@ -42,7 +42,7 @@ swam in the ocean
 
 ## 2022-12-08
 
-bus to buerto del rosario
+bus to puerto del rosario
 
 bread + cheese in the hyperdino
 
@@ -109,7 +109,7 @@ dive! 2x
 
 ## 2022-12-21
 
-Food @ Fariones Grill ·2019 - Steakhouse, Puerto del Carmen
+Food @ Fariones Grill - Steakhouse, Puerto del Carmen
 "C. Cenobio, 3, 35510 Tías, Las Palmas, Spain"
 
 ## 2022-12-22

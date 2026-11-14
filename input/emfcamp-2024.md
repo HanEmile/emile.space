@@ -16,19 +16,19 @@
 
 ## CTF - WTF?
 
-### Links
-
 Type: Workshop
 Title: CTF - WTF?
 Date: tbd.
-Start Time: tdb.
+Start Time: tbd.
 Duration: 1h+ more like 2h+
 Venue: milliways
 Name: hanemile
-Description: Capture the flag events have been a great way to learn varius hacking topics. Participating can be not trivial, thus this workshop gives a great start into the whole topic introducing the basics, giving you starting points and diving deeper into some categories in order to kickstart your experience.
+Description: Capture the flag events have been a great way to learn various hacking topics. Participating can be not trivial, thus this workshop gives a great start into the whole topic introducing the basics, giving you starting points and diving deeper into some categories in order to kickstart your experience.
 Maximum Attendees: 20
 Cost (per attendee, in GBP): 0 GBP
 Age Range: 0 - 200
 Attendee Equipment: Laptop with an Internet connection and Power.
+
+### Links
 
 - [slides](https://chaosdorf.de/~hanemile/ctf_beginner.pdf)

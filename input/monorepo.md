@@ -13,7 +13,7 @@
 
 Well, I've started working on a kind of monorepo, with a few quirks... let me explain.
 
-I love structuring stuff, but I can't really keep one structure alive long enough, as it will die sooner or later, by me just rebuilding another structure. This has led to me switching beteween multiple different ways of sorting, classifying and orderning my files over the last years. Now I tend to separate everything into it's own little folder: here some programming projects, here some files related my site, here some files in which I keep notes and so on.
+I love structuring stuff, but I can't really keep one structure alive long enough, as it will die sooner or later, by me just rebuilding another structure. This has led to me switching between multiple different ways of sorting, classifying and ordering my files over the last years. Now I tend to separate everything into it's own little folder: here some programming projects, here some files related my site, here some files in which I keep notes and so on.
 
 Now a few days ago, I realized something: everything somehow belongs together. The notes I have stored as some markdown files are somehow connected to the markdown files making up the pages of my site. The pages of my site are somehow connected to the projects I do. So why not throw everything together into one big repo and work with everything there? Well, are arguments against doing this which are fundamentally correct, but I'm trying this out now.
 
@@ -27,7 +27,7 @@ I've come to realize that having a folder of markdown files is fairly nice for t
 
 Until a few days ago, I wasn't really fond of giving these fancy "note taking apps" a try, as all of them I tried (and I did try a lot of them on one evening about two years ago) were not nice. By "not nice", I mean slow, sluggish, getting in my way, slowing to the whole process of doing something and didn't really convince me of changing my current setup.
 
-Then, on the 7th of july 2021, I spoke with dodo (a cool guy from my local hackspace) and he breifly mentioned that he started using obsidian. I went on and gave it a try (by simply dumping all my markdown notes into a new obsidian "vault") and it worked out really well. This might be becaues of obsidian doing stuff pretty much exactly how I'd expect them to: work on plain markdown files and simply provide a sort of overlay, allowing me to handle the syncronization of the files myself.
+Then, on the 7th of july 2021, I spoke with dodo (a cool guy from my local hackspace) and he briefly mentioned that he started using obsidian. I went on and gave it a try (by simply dumping all my markdown notes into a new obsidian "vault") and it worked out really well. This might be because of obsidian doing stuff pretty much exactly how I'd expect them to: work on plain markdown files and simply provide a sort of overlay, allowing me to handle the syncronization of the files myself.
 
 ## The projects setup
 
@@ -39,7 +39,7 @@ For hosting emile.space, I've gone through multiple iterations and am currently 
 
 ## Syncronization layer
 
-Now I mentioned that I've merged everything, and having everything everywhere (on every device) is quite nice. In oder to do so, twink0r once mentioned that syncthing is awesone. And ohhhhhhhh yes it is!
+Now I mentioned that I've merged everything, and having everything everywhere (on every device) is quite nice. In oder to do so, twink0r once mentioned that syncthing is awesome. And ohhhhhhhh yes it is!
 
 I went on and setup syncthing
 

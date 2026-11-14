@@ -82,7 +82,7 @@ After slightly inspecting the page, the next step would be to look into the page
 ```
 
 
-The page doesn't consist of much, there's some static html content, some css and some javascript. The static content doesn't do anything, so lets don't even bother into looking into it. The interesting part is the javascript, in this case, the confessions.js file. Let's go through it block by block:
+The page doesn't consist of much, there's some static html content, some css and some javascript. The static content doesn't do anything, so let's not even bother looking into it. The interesting part is the javascript, in this case, the confessions.js file. Let's go through it block by block:
 
 The part below "talks with the GraphQL endpoint", so it communicates with the GraphQL system in the backend sending a JSON body containing the operation name (hardcoded to null), a query (more regarding that in the next block) and variables to the backend. It then reads the response and returns the response data.
 

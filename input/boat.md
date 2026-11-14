@@ -25,7 +25,7 @@ Well, we've been thinking about this whole boat stuff with a few people for some
 
 When sailing in Germany, you seem to need a license, in order to get one, you have to pass a course. There are multiple kinds of licenses:
 
-[Wikipedia / List of certificates for operators ofo pleasure craft](https://en.wikipedia.org/wiki/List_of_certificates_for_operators_of_pleasure_craft): a nice list with the licenses each country has.
+[Wikipedia / List of certificates for operators of pleasure craft](https://en.wikipedia.org/wiki/List_of_certificates_for_operators_of_pleasure_craft): a nice list with the licenses each country has.
 
 ### German
 
@@ -39,7 +39,7 @@ When sailing in Germany, you seem to need a license, in order to get one, you ha
   - valid for offshore up to 12 miles
 
 - SSS (Sportseeschifferschein)
-  - valid for offshore up to 30 miles and North Sea, Baltic Sea, Mediterranean Sea, Black Sea and English Channel, Bristol Channel, Irish Sea, Scottisch Seas
+  - valid for offshore up to 30 miles and North Sea, Baltic Sea, Mediterranean Sea, Black Sea and English Channel, Bristol Channel, Irish Sea, Scottish Seas
 
 - SHSS (Sporthochseeschifferschein)
   - valid for offshore

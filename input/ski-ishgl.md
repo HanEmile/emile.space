@@ -12,6 +12,6 @@
 
 Ski in Ischgl with my father and brothers.
 
-Turns out: if you're a qualified audio technician, you could do some amazing work by configuring the speakers they've got on those huts. The completely overdrive and sound horrible (sound wise, people just drink enough to make it bearable).
+Turns out: if you're a qualified audio technician, you could do some amazing work by configuring the speakers they've got on those huts. They completely overdrive and sound horrible (sound wise, people just drink enough to make it bearable).
 
 

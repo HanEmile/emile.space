@@ -36,7 +36,7 @@ Vorraussetzungen:
 2023-04-08 18:00 50min
 K1/3 Workshop Marge Piercy
 
-CTF (CaptureTheFlag) is ein wunderbares Konzept um in die Welt der IT-Security einzusteigen. Hier gibt's einen schnellen kleinen talk und dann hand's on "Betreutes hacken" um anschießend gemeinsam sich an spannende Probleme zu setzen.
+CTF (CaptureTheFlag) is ein wunderbares Konzept um in die Welt der IT-Security einzusteigen. Hier gibt's einen schnellen kleinen talk und dann hands-on "Betreutes hacken" um anschließend gemeinsam sich an spannende Probleme zu setzen.
 
 ### Links
 

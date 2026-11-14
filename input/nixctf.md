@@ -31,7 +31,7 @@ The scoreboard should rank the teams, thus count amount of points that they have
 
 Let's say you've built challenges and started defining the amounts of points a challenge is worth on your own. The result is biased, due to you knowing the solution and thus possibly misjudging the challenge difficulty.
 
-A possible popular solution to this is called "Dynamic Scoring". Using this concept, each challenge is worth a fixed amount of points from the beginning and the amounts of points the challenge is worth sinks with the amount of teams solving the challenge. For example, the challenge may be worth 500 points withouy any team having solved it, but if a team manages to solve the challenge, the amount of points the challenge is worth drops to 499. With another solve, the points drop eaven further to 484 and so forth (we're getting to how these points are calculated in a minute!).
+A possible popular solution to this is called "Dynamic Scoring". Using this concept, each challenge is worth a fixed amount of points from the beginning and the amounts of points the challenge is worth sinks with the amount of teams solving the challenge. For example, the challenge may be worth 500 points without any team having solved it, but if a team manages to solve the challenge, the amount of points the challenge is worth drops to 499. With another solve, the points drop even further to 484 and so forth (we're getting to how these points are calculated in a minute!).
 
 ### Dynamic scoring
 
@@ -83,7 +83,7 @@ Isolation can be achieved in many ways. For example, limiting the stuff the user
 
 First of all, let's define what we've got: Let's say we've build an interactive challenge (for example one that might look like a python shell). We allow the user to enter stuff and exec it. The user can now in theory do everythig they want on the host the service is running on. In order to prevent this, we could insert the service into a container or so, but containers don't automatically mean security...
 
-Luckily, we're not the first one's organizing such a CTF, so people have built stuff that might help, for example nsjail. Nsjail is a "A light-weight process isolation tool [...]" allowing us to isolate our challenge. Even better, njail offers a lot of stuff making hosting such vulnerable challenges great: It can host a binary, wait for a connection and upon recieving a connection run some binary or so connecting the network io with stdin and stdout.
+Luckily, we're not the first one's organizing such a CTF, so people have built stuff that might help, for example nsjail. Nsjail is a "A light-weight process isolation tool [...]" allowing us to isolate our challenge. Even better, nsjail offers a lot of stuff making hosting such vulnerable challenges great: It can host a binary, wait for a connection and upon recieving a connection run some binary or so connecting the network io with stdin and stdout.
 
 From the examples at the bottom of the nsjail man --help page:
 
@@ -388,7 +388,7 @@ Overall, I find it quite amazing that nixos allows me to configure everything us
 
 ## Meta
 
-When stuff goes wrong, it is normally nice to be in control. For example: when a challenge is broken. The firsy thing should be to remove the challenge from the plage where new players access the challenge, so no new people access it. Another thing might be do disable flag submission for that particular challenge.
+When stuff goes wrong, it is normally nice to be in control. For example: when a challenge is broken. The first thing should be to remove the challenge from the place where new players access the challenge, so no new people access it. Another thing might be do disable flag submission for that particular challenge.
 
 For doing all of this, an admin web-interface or so might be really practical, but as minimal as the scoreboard is, as minimal is the solution: a config file that is being watched by viper (config management in go) with sort of hooks that execute given functions upon change. This allows a function to read the config after it has been changed and sync the state of that config to the database.
 
@@ -396,7 +396,7 @@ Using this, we can adjust the active state of a single challenge just by changin
 
 ## Lessons learnt
 
-As promised, a small lessons leart: Overall, things went really well, but here some stuff that was missing:
+As promised, a small lessons learnt: Overall, things went really well, but here some stuff that was missing:
 
 Updating challenges was kind of weird: due to me having to update the docker images on the host manually, it didn't really work by simply editing the challenge locally, pushing the result to a repo that might use drone as we did last year to build the docker image and push it to a private registry that is then accessd by nixos.
 

@@ -15,7 +15,7 @@ A new game mixing two existing games - monopoly and poker.
 
 ## Rules
 
-### Defintions
+### Definitions
 
 Monopoly consists of "Rounds" (for each person in game, execute actions until it's the first persons turn again) called "Layer 1" from here on. Each rounds consists of an action performed by each player called "Layer 2".
 
@@ -38,9 +38,9 @@ Play `n` rounds of monopoly and then `m` rounds of poker (with the same money).
 
 ## To try
 
-- start the new game of poker after a "Layer 2" (explaiend in rules above) action instead of a "Layer 1" action.
+- start the new game of poker after a "Layer 2" (explained in rules above) action instead of a "Layer 1" action.
 
-## Futher ideas
+## Further ideas
 
 - META add other games which also use money or other concepts from monopoly or poker (for example a card game added into poker).
 - MONOPOLY: add more directions into monopoly (two boards with conditions for getting from one board to the next)

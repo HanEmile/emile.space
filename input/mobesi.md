@@ -17,7 +17,7 @@ The first attempt at writing a web application proxy that is supposed to be used
 
 ## Collaboration
 
-When currently looking into a page, all inforamtion is stored locally on your machine. While most tools have embraced collaboration, information isn't shared. Now one could simply install some proxy on a vm somewhere and tell everyone to proxy their traffic through there, this isn't really practical.
+When currently looking into a page, all information is stored locally on your machine. While most tools have embraced collaboration, information isn't shared. Now one could simply install some proxy on a vm somewhere and tell everyone to proxy their traffic through there, this isn't really practical.
 
 In the end, what I imagine would be a proxy that allows you to view the results locally (requests send and so), but for all people of the team. You should still be able to use it in "singleplayer" mode, but should also be able to function as a "shared host" that syncronizes the state of the application with other people.
 

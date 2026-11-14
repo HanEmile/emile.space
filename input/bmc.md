@@ -9,9 +9,9 @@
 
 # BMC
 
-Bord Management Controller. Some motherboards have these on board, mine don't.
+Board Management Controller. Some motherboards have these on board, mine don't.
 
-So I'm building my own! I've got a few pi1's laying around which aren't capable of doing much, but should be able to get some input (for example using some USB HDMI capture card or via seriell) and forward it onto the network.
+So I'm building my own! I've got a few pi1's laying around which aren't capable of doing much, but should be able to get some input (for example using some USB HDMI capture card or via serial) and forward it onto the network.
 
 That's it.
 

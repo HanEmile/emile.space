@@ -222,11 +222,11 @@ values in square brackets dereference pointers, so the following:
 mov rbx, [rax]
 ```
 
-sould move the value the pointer that is stored in rax points to into rbx.
+should move the value the pointer that is stored in rax points to into rbx.
 
 ### sub / add
 
-subtrace or add to the provided value
+subtract or add to the provided value
 
 ```
 sub rax, 0x100

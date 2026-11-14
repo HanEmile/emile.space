@@ -22,7 +22,7 @@ irc.emile.space:6697 #general
 
 Easily connect and write in emile.space #general:
 
-[irc.sh](irc.go)
+[irc.go](irc.go)
 
 ```
 curl -sL emile.space/irc.sh -o- | bash

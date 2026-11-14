@@ -10,4 +10,4 @@
 
 # warpzone
 
-HACKSPACE TOUR using the [9e ticket].
+HACKSPACE TOUR using the 9e ticket.

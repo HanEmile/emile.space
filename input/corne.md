@@ -9,6 +9,6 @@
 
 # corne
 
-My first split. Disassembled^WFell apart due to the whole case being a total accident of a design.
+My first split. Fell apart due to the whole case being a total accident of a design.
 
 Parts reused in the [Skeletyl](/skeletyl).

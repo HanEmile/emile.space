@@ -9,12 +9,14 @@
 
 # Postgres Docker-Compose
 
-This is a basic dockerfile for quickly setting up a postgres database and pgadmin4.
+This is a basic docker-compose file for quickly setting up a postgres database and pgadmin4.
 
 Make sure to change the passwords!
 
 [docker-compose.yml](/postgres-docker-docker-compose.yml)
 
+
+```yaml
 version: "3"
 
 services:
@@ -48,3 +50,4 @@ volumes:
 
 networks:
   database:
+```

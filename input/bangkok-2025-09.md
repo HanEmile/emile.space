@@ -14,5 +14,5 @@ Part of the [2025 Asia Trip](https://emile.space/asia-2025).
 
 Got used to the jetlag, walked around A LOT.
 
-Kind of accidentally got to the [Wat Arun](https://en.wikipedia.org/wiki/Wat_Arun) Temple (wanted to take a river boat a bit, but there was this boat going to that template and I though "why not?")
+Kind of accidentally got to the [Wat Arun](https://en.wikipedia.org/wiki/Wat_Arun) Temple (wanted to take a river boat a bit, but there was this boat going to that temple and I thought "why not?")
 

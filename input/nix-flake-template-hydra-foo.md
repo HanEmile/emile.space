@@ -116,7 +116,7 @@ The function we define is bound to a name using the `=` operator, we call our fu
      template-packages =
 ```
 
-Now the function is essentially just a call to the `buildins.mapAttrs` function. We have to provide an attrset (in our case, the templates defined in the flake, namely `self.templates`). mapAttrs takes two values, `name` and `value`. We can then use them to define a new attrset that uses the existing key (being the original name) and a new value.
+Now the function is essentially just a call to the `builtins.mapAttrs` function. We have to provide an attrset (in our case, the templates defined in the flake, namely `self.templates`). mapAttrs takes two values, `name` and `value`. We can then use them to define a new attrset that uses the existing key (being the original name) and a new value.
 
 For example, we could do the following:
 
@@ -237,7 +237,7 @@ Which takes all the templates, looks up their system, then merges that into a fi
 In the let binding after the outputs attrset [described here](#template-packages-function), let's add another function doing that:
 
 ```
-      merged-pemplate-packages =
+      merged-template-packages =
         system:
         let
           lib = nixpkgs.lib;
@@ -257,7 +257,7 @@ Once again, let's go through it bit by bit:
 First of all, we define a function and bind it to the name `merged-template-packages`. The function takes a system, such as `aarch64-darwin` or `x86_64-linux` as it's only argument.
 
 ```
-      merged-pemplate-packages =
+      merged-template-packages =
         system:
 ```
 

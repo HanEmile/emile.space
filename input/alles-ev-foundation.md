@@ -9,4 +9,4 @@
 
 # ALLES! e.V. Foundation
 
-We founded a "eingetragener Verein" (registerd club) for the [ALLES!](/alles) CTF Team
+We founded a "eingetragener Verein" (registered club) for the [ALLES!](/alles) CTF Team

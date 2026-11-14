@@ -26,7 +26,7 @@
 - press out the lime juice
 - take one big glas (320ml)
 
-- 40ml tequilla / apple juice
+- 40ml tequila / apple juice
 - 20ml lime juice
 
 - fill with ice (completely)

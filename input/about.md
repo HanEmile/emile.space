@@ -46,7 +46,7 @@ age -d -i ~/.ssh/id_ed25519 crypted.txt.age > plaintext.txt
 
 A lot.
 
-People always ask "what programming language" and in the end, it's kind of irrelevant, but if you really want to know: mostly [Rust](https://www.rust-lang.org), [Go](https://go.dev), [Python](https://www.python.org), [C](https://en.wikipedia.org/wiki/C_(programming_language), [Common-Lisp](https://lisp-lang.org) and others sprinkled in (I've had a bit of fun with [ocaml](https://ocaml.org) lately).
+People always ask "what programming language" and in the end, it's kind of irrelevant, but if you really want to know: mostly [Rust](https://www.rust-lang.org), [Go](https://go.dev), [Python](https://www.python.org), [C](https://en.wikipedia.org/wiki/C_(programming_language)), [Common-Lisp](https://lisp-lang.org) and others sprinkled in (I've had a bit of fun with [ocaml](https://ocaml.org) lately).
 
 ## CV like foo
 
@@ -75,8 +75,8 @@ People do this a lot, let's give it a shot:
 ### Associations
 
 [chaosdorf e.V.](https://chaosdorf.de)
-  - 2017-03-11 First time there
-  - 2017-11-12 Became member
+  - 2017-03-10 First time there
+  - 2017-11-14 Became member
   - 2021-11-09 Got voted as "2. Vorsitzender"
   - 2023-11-04 End of first term as "2. Vorsitzender", got voted in again
   - 2025-12-13 End of second term as "2. Vorsitzender", resigned as a member

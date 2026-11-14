@@ -40,7 +40,7 @@ The complete code is a bit more than 100 lines of pure code, I've added a lot of
 Beware: this code was written down in a matter of minutes, there are a lot of things wrong with it (such as everything being in the main function), but it works for a minimal prototype which was the goal of all of this.
 
 
-```rust
+```go
 package main
  
 import (

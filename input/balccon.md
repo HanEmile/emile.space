@@ -8,7 +8,7 @@
   (location "Novi Sad" "Serbia")
 )
 
-# BAlCCon
+# BalCCon
 
 ## r2wars - battle bots in shared memory
 
@@ -30,8 +30,8 @@ Running programmes simultaneously in the same memory: what could go wrong? This 
 
 ### Links
 
-- [balcon slides](/balccon-r2wars.pdf)
+- [balccon slides](/balccon-r2wars.pdf)
 - [github.com/hanemile/r2wars](https://github.com/hanemile/r2wars)
 - [r2wars blogpost (en) with a lot of info](/r2wars)
 - [pretalx page](https://cfp.balccon.org/balccon2k23/talk/SNH8QR/)
-- [GPN slides (weird pdf pdf)](/gpn23-r2wars_GPN21.pdf)
+- [GPN slides (weird pdf)](/r2wars_GPN21.pdf)

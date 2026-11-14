@@ -132,7 +132,7 @@ Two variables are defined, i for specifying the index in the upcoming loop (more
 ```
 
 
-Now this is the actual operation, what happens here, is that for every pointer in the array of pointers (so every four bytes), the value get's added to the result. As the password consists of 20 chars, we add do this five times, once for each 4 byte block. For example, imagine you'd enter a password consisting of 20 * 'a': (AAAAAAAAAAAAAAAAAAAA). What happens is that the input is defined as an array of pointers with each entry being four bytes:
+Now this is the actual operation, what happens here, is that for every pointer in the array of pointers (so every four bytes), the value get's added to the result. As the password consists of 20 chars, we can do this five times, once for each 4 byte block. For example, imagine you'd enter a password consisting of 20 * 'a': (AAAAAAAAAAAAAAAAAAAA). What happens is that the input is defined as an array of pointers with each entry being four bytes:
 
 
 ```
@@ -274,7 +274,7 @@ This is correct! This means that what is left to do, is to convert the values to
 ```
 
 
-Now inserting such hex values isn't really fun, but we can use python to help doing this. It is important to flip the bytes, and reverse the string direction, as this is stored using the little endian format, meaning the the least signigicant bits().
+Now inserting such hex values isn't really fun, but we can use python to help doing this. It is important to flip the bytes, and reverse the string direction, as this is stored using the little endian format, meaning the least significant bits.
 
 
 ```

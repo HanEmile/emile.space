@@ -11,6 +11,6 @@
 
 [emile](/about#contact) [/symbolic-execution](/symbolic-execution)
 
-The goly grail.
+The holy grail.
 
 We'll go into what symbolic execution actually is and how to do cool stuff with it.

@@ -1,5 +1,5 @@
 (meta
-  (tag "event" "gpn")
+  (tag "event" "elacon")
   (published "2026-09-28")
   (modified "2026-10-25")
   (date "2025-05-01" "2025-05-04")

@@ -11,7 +11,7 @@
 
 During my internship in Heidelberg (Summer 2017), I started looking into how to simulate galaxies. For simulating galaxies, I had to find out how to first generate them. After doing so and having generated a lot of stars, I started building software to simulate the galaxies.
 
-The whole project was then submitted to the Jugend-Forscht competition which requires a writeup of a few pages. You can read the writeup [here](/galaxy-simulation-JUFO19.pdf) and view the project source in the [git orga](https://github.com/galaxy-simulator)
+The whole project was then submitted to the Jugend-Forscht competition which requires a writeup of a few pages. You can read the writeup [here](/galaxy-simulation-JUFO19.pdf) and view the project source on [git.darknebu.la](https://git.darknebu.la/GalaxySimulator) (orga: [github](https://github.com/galaxy-simulator))
 
 
-![](/galaxy-simulation-overview.png)</img>
+![](/galaxy-simulation-overview.png)

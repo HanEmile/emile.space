@@ -45,8 +45,6 @@
 
 ### house of roman
 
-### house of spirit
-
 ### house of botcake
 
 ### house of mind

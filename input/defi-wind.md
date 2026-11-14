@@ -16,9 +16,9 @@
 
 THAT WAS AMAZING.
 
-So each race is ~40km long with 4 runs being each about 10km long. On the first reach, I went **way** to much downwind (due to the amount of people around me limiting me in speed, thus not getting into planning and thus having to go downwind in order not to sink), but after seeing the first yellow buoys in the distance, I went as far upwind as possible in order to reach the first jibing mark. That mark was filled by an aweful lot of people that had fallen trying to jibe directly around it (which is so dump tbh., like you just rode 10km, jibing 100 or 200m further out won't make a difference for the mid to late field).
+So each race is ~40km long with 4 runs being each about 10km long. On the first reach, I went **way** to much downwind (due to the amount of people around me limiting me in speed, thus not getting into planning and thus having to go downwind in order not to sink), but after seeing the first yellow buoys in the distance, I went as far upwind as possible in order to reach the first jibing mark. That mark was filled by an awful lot of people that had fallen trying to jibe directly around it (which is so dumb tbh., like you just rode 10km, jibing 100 or 200m further out won't make a difference for the mid to late field).
 
-The second reach (back from the first jibing mark to the start) was AMAZING. Like: on the first reach, I thought about just riding back the the beach and calling it a day, but the second reach with a slight broad reach course keeping close to the beach was insanely fun. Just blasting seemingly downwind just limited by yourself (Like: I could probably have gone faster, but I felt fast enough and didn't want to loose control, this is a marathon like event in the end, so a "slow" (it wasn't slow) and steady ride is preferable).
+The second reach (back from the first jibing mark to the start) was AMAZING. Like: on the first reach, I thought about just riding back the beach and calling it a day, but the second reach with a slight broad reach course keeping close to the beach was insanely fun. Just blasting seemingly downwind just limited by yourself (Like: I could probably have gone faster, but I felt fast enough and didn't want to lose control, this is a marathon like event in the end, so a "slow" (it wasn't slow) and steady ride is preferable).
 
 ### Material choice:
 
@@ -26,7 +26,7 @@ The second reach (back from the first jibing mark to the start) was AMAZING. Lik
   - 30cm fin
 - 4.7m² gun sails yeah freestyle sail (I tried the 5.6m² slalom sail, Just to much for my 60kg).
   - The noerstick helped nicely swapping the sails out, first time I tried it and worked really well!
-  - Also: getting the sail perfectly trimmed was a breeze: I've often had the problem of having a *slightly* too long mast-extension and thought of building something like the noerstick. Now that I've used it: it really is that one innovation that adds some more fun to the whole process. (Yes, you could just spend some time rigging and de-rigging the sail a few times in order to find the perfect distanct, but this is just so convinient).
+  - Also: getting the sail perfectly trimmed was a breeze: I've often had the problem of having a *slightly* too long mast-extension and thought of building something like the noerstick. Now that I've used it: it really is that one innovation that adds some more fun to the whole process. (Yes, you could just spend some time rigging and de-rigging the sail a few times in order to find the perfect distance, but this is just so convenient).
 
 ### Wind
 

@@ -1,7 +1,6 @@
 (meta
   (date "")
   (tag "sport")
-  (kind "sport")
   (published "2022-01-01")
   (modified "2026-11-13")
   (author "Emile")
@@ -29,10 +28,10 @@ Underwater
 
 ### 2024
 
-2024-12-17 Teneriffe, Abades - Dives didn't take place due to high waves
-2024-12-18 Teneriffe, tbd.
-2024-12-19 Teneriffe, tbd.
-2024-12-20 Teneriffe, tbd.
+2024-12-17 Tenerife, Abades - Dives didn't take place due to high waves
+2024-12-18 Tenerife, tbd.
+2024-12-19 Tenerife, tbd.
+2024-12-20 Tenerife, tbd.
 
 ### 2025
 

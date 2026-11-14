@@ -15,7 +15,7 @@ As with every good blog, the only content is in regard to the blog itself, so I'
 
 ## the current structure
 
-So currently, [emile.space](https://emile.space) is built up in a tree like structure: you can navigate it by entering a "node" (for example "blog") and from there on access futher child nodes. While this is really nice for browsing around, It's kind of weird for editing purposes.
+So currently, [emile.space](https://emile.space) is built up in a tree like structure: you can navigate it by entering a "node" (for example "blog") and from there on access further child nodes. While this is really nice for browsing around, It's kind of weird for editing purposes.
 
 ## the problem
 
@@ -23,7 +23,7 @@ Now imagine you're editing a page and realize "well, I've already got that page 
 
 ## the first solution
 
-Well, instead of having some folder structure which contains a README.md in each folder, I'd like to have a single folder containing files with the name of the individual files dictating what the're about.
+Well, instead of having some folder structure which contains a README.md in each folder, I'd like to have a single folder containing files with the name of the individual files dictating what they're about.
 
 ```
 /projects/abc/README.md

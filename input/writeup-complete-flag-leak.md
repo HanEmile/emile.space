@@ -36,9 +36,11 @@ lsblk output
 The leak is actually so simple that I'm always astonised that it actually works. Let me present:
 
 
+```
 ; nc jh2i.com 50026
 cat /dev/vda1 | grep -ao "flag{.*}"
 …
+```
 
 
 So what we do, is we read from the blockdevice and grep for the flag format. It's literally as simple as that.
@@ -52,7 +54,9 @@ So after taking this screenshot, I waited about a minute to see if there was mor
 I extracted all flags from the dump like this:
 
 
+```
 ; cat flagleak.txt | grep -o "flag\{\w{1,50}\}" | sort | uniq > flagleak_clean.txt
+```
 
 
 and proceeded to tweet the sha256sum of the flagleak_clean.txt file (functioning as a proof this happened about 1.5h after the CTF started):
@@ -63,7 +67,7 @@ Here a screenshot of the flag leak for verification:
 
 ![](/writeup-complete-flag-leak-full_leak.png)
 
-(Sidenote: the CTF did contain flags starting with the flag format JCTF{.*}. These aren't included in the leak, as I simply grepped for the the other flag format flag{}. Also, flags not following a flag format are not in the leak. All of these could have been found, but dumping all of the data accessible (600GB+) wasn't my intention).
+(Sidenote: the CTF did contain flags starting with the flag format JCTF{.*}. These aren't included in the leak, as I simply grepped for the other flag format flag{}. Also, flags not following a flag format are not in the leak. All of these could have been found, but dumping all of the data accessible (600GB+) wasn't my intention).
 
 
 ## Disclosure

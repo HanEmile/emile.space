@@ -19,7 +19,7 @@ In the end, this whole "personal website" thing is a short form of me transferri
 
 ## The actual hosting
 
-So now that we've got the "whay host stuff" out of the way, let's get to one of the topics I kind of hate: the how.
+So now that we've got the "what host stuff" out of the way, let's get to one of the topics I kind of hate: the how.
 
 The information can be presented in multiple ways. In the end, I've got a few files containing the raw information and want it to look kind of okay. There are infinite ways of presenting this, but I (at the time of writing this), just took the mdbook project, gave it all my markdown files, wrote a small script to build it and push it to a server that hosts the resulting build artifacts.
 
@@ -37,7 +37,7 @@ Such metrics might be:
 
 ## Restructuring
 
-I'm not the person that likes to stand still on a working system. I love to optimize eveything and can't really stay on a point. That's why I've played around with so many systems in the past and have learn, or at least tried out, so many tools, frameworks or other kinds of software.
+I'm not the person that likes to stand still on a working system. I love to optimize everything and can't really stay on a point. That's why I've played around with so many systems in the past and have learn, or at least tried out, so many tools, frameworks or other kinds of software.
 
 Since december 2019 (18 months as of writing this post), I've been using NixOS as my primary system, and fully embrace the whole ecosystem. I just kind of like it and would like to build some kind of "personal website" in a similar way. For this to work, I'll need to restructure my current setup.
 
@@ -55,11 +55,11 @@ I'm thinking of a page that allows me to create profiles containing symlinks to 
 
 Now for backwards compatibility reasons, I'd still like to inject some kind of file informing the system, that if a user accesses an old path, they should be redirected to the new /emile.space/store/... path.
 
-For this, I'm probabbly simply going to spider the page using gospider.
+For this, I'm probably simply going to spider the page using gospider.
 
 ## Building the new system
 
-So the idea is (fairly) simply imho, building it should be quite fun. As I've started doing stuff in Rust. All of this should be packaged in a nix-module and I'd love to play around with nix-channels a bit, as hosting one on my one sounds like fun (although I've read some stuff regarding flakes and I'm currently still unsure if that's the way to go. It still seems to be in the very early stages, so I'll wait a bit for that).
+So the idea is (fairly) simply imho, building it should be quite fun. As I've started doing stuff in Rust. All of this should be packaged in a nix-module and I'd love to play around with nix-channels a bit, as hosting one on my own sounds like fun (although I've read some stuff regarding flakes and I'm currently still unsure if that's the way to go. It still seems to be in the very early stages, so I'll wait a bit for that).
 
 ## Layouts
 
@@ -118,7 +118,7 @@ Resources
 ```
 
 
-My idea here is to treat the resources like binaries. Like in the nix store, executing a binary by providing the whole path isn't really nice and adding every single resouce to the "PATH" also isn't really nice, so there needs to be a better way. The nix store manages this in profiles. The profiles contain symlinks to "activated" packages, the analogy can be transferred here in a way that published resources can be seen as "activated". This would mean that if I've got a resource that I'm currenly writing, I can add it the the "draft" profile, allowing me to see it, but not others (I'll have to figure out how to handle authorization and how to filter what entities can access that profile, but that's a problem for later).
+My idea here is to treat the resources like binaries. Like in the nix store, executing a binary by providing the whole path isn't really nice and adding every single resource to the "PATH" also isn't really nice, so there needs to be a better way. The nix store manages this in profiles. The profiles contain symlinks to "activated" packages, the analogy can be transferred here in a way that published resources can be seen as "activated". This would mean that if I've got a resource that I'm currenly writing, I can add it to the "draft" profile, allowing me to see it, but not others (I'll have to figure out how to handle authorization and how to filter what entities can access that profile, but that's a problem for later).
 
 
 Profiles

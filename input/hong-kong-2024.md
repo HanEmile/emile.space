@@ -10,17 +10,17 @@
 
 # Hong Kong
 
-My first time in kong kong and oh wow... I love this city.
+My first time in Hong Kong and oh wow... I love this city.
 
 Amazing city with lots of (pretty much only) skyscrapers, yet very green.
 
-After taking the train from the airport to the city, walked to the room I booked. Had a small room directly next to the Tsai Sha Tsui station: 40 Nathan road, Block B, 12th Floor, B3, Room 22 Walked around quite a bit, from there on.
+After taking the train from the airport to the city, walked to the room I booked. Had a small room directly next to the Tsim Sha Tsui station: 40 Nathan road, Block B, 12th Floor, B3, Room 22. Walked around quite a bit, from there on.
 
-Took the train to the southern big island and took the train up to the "peak", which to my disapointment wasn't really a peak, so I walked up further the street going uphill (in the dark, it was at ~22:00) and came by the victoria peak garden, which was probably nice, although I didn't see anything, as it was already dark. Trying to go further uphill, I came upon two wild Boars trying to eat some garbage, which was quite a surprise. While slowly backing up, I bing-ed it and found out that hong kong apparently has got quite the boar problem (stuff they don't tell you when immigrating). The warning signs of the typhoon went up (they were at 3 my whole stay), that evening until 8 with the warning that they might stop the trains at some point or so, so I quickly took the next train to the mainland, as I didn't want to strand on the island during the typhoon.
+Took the train to the southern big island and took the train up to the "peak", which to my disappointment wasn't really a peak, so I walked up further the street going uphill (in the dark, it was at ~22:00) and came by the victoria peak garden, which was probably nice, although I didn't see anything, as it was already dark. Trying to go further uphill, I came upon two wild Boars trying to eat some garbage, which was quite a surprise. While slowly backing up, I bing-ed it and found out that hong kong apparently has got quite the boar problem (stuff they don't tell you when immigrating). The warning signs of the typhoon went up (they were at 3 my whole stay), that evening until 8 with the warning that they might stop the trains at some point or so, so I quickly took the next train to the mainland, as I didn't want to strand on the island during the typhoon.
 
-On the next day, I took the train to the Southern Island again and to South Horizons, which I'd expected to be a small town, but no: it was just more skyscrapers! Walked around there and the harbour and then took the train to the mainland again, to walk form Tsai Sha Tsui to the Kowloon Walled Park (which took like 2h).
+On the next day, I took the train to the Southern Island again and to South Horizons, which I'd expected to be a small town, but no: it was just more skyscrapers! Walked around there and the harbour and then took the train to the mainland again, to walk from Tsim Sha Tsui to the Kowloon Walled Park (which took like 2h).
 
-So about this "Syper Taifun":
+So about this "Super Typhoon":
 
 [https://www.hko.gov.hk/textonly/v2/tc/tcp.htm](https://www.hko.gov.hk/textonly/v2/tc/tcp.htm)
 

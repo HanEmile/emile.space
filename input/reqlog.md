@@ -7,7 +7,7 @@
   (info "tag")
 )
 
-# redir
+# reqlog
 
 A minimal request logger.
 
