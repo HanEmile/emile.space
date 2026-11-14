@@ -2,7 +2,7 @@
   (date "2026-10-18")
   (tag "blog")
   (published "2026-10-18")
-  (modified "2026-11-13")
+  (modified "2026-11-14")
   (author "Emile"))
 
 # trolls

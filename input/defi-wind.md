@@ -1,7 +1,7 @@
 (meta
   (tag "event" "windsurf")
   (published "2023-05-01")
-  (modified "2026-09-23")
+  (modified "2026-11-14")
   (date "2023-05-01")
   (author "Emile")
   (info "tag" "date" "location")

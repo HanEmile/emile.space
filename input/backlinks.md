@@ -2,7 +2,7 @@
   (date "")
   (tag "blog" "vokobe")
   (published "2022-11-03")
-  (modified "2026-11-13")
+  (modified "2026-11-14")
   (author "Emile")
   (info "tag" "published")
 )

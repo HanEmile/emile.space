@@ -2,7 +2,7 @@
   (date "")
   (tag "project" "jufo")
   (published "2019-01-01")
-  (modified "2026-11-13")
+  (modified "2026-11-14")
   (author "Emile")
   (info "tag")
 )

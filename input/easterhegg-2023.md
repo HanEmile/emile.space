@@ -1,7 +1,7 @@
 (meta
   (tag "event" "ccc")
   (published "2023-04-01")
-  (modified "2026-09-28")
+  (modified "2026-11-14")
   (date "2023-04-07" "2023-04-10")
   (author "Emile")
   (location "Hamburg" "Germany")
